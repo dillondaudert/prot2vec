@@ -5,6 +5,9 @@ import tensorflow as tf
 
 HOME = str(Path.home())
 
+def _int64_feature(value):
+    return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+
 def _floats_feature(value):
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))
 
@@ -37,14 +40,15 @@ def cpdb_to_tfrecord():
     valid_examples = range(5600,5877)
     test_examples = range(5877,6133)
 
-    trainfile = HOME+"./data/cpdb/cpdb_6133_train.tfrecords"
-    validfile = HOME+"./data/cpdb/cpdb_6133_valid.tfrecords"
+    trainfile = HOME+"/data/cpdb/cpdb_6133_train.tfrecords"
+    validfile = HOME+"/data/cpdb/cpdb_6133_valid.tfrecords"
     testfile = HOME+"/data/cpdb/cpdb_6133_test.tfrecords"
     print("Writing ", trainfile)
     trainwriter = tf.python_io.TFRecordWriter(trainfile)
 
     for index in train_examples:
         example = tf.train.Example(features=tf.train.Features(feature={
+            'seq_len': _int64_feature(seq_lengths[index]),
             'seq_data': _floats_feature(seqs[index, 0:num_features*seq_lengths[index]]),
             'label_data': _floats_feature(labels[index, 0:num_labels*seq_lengths[index]])}))
         trainwriter.write(example.SerializeToString())
@@ -54,6 +58,7 @@ def cpdb_to_tfrecord():
     validwriter = tf.python_io.TFRecordWriter(validfile)
     for index in valid_examples:
         example = tf.train.Example(features=tf.train.Features(feature={
+            'seq_len': _int64_feature(seq_lengths[index]),
             'seq_data': _floats_feature(seqs[index, 0:num_features*seq_lengths[index]]),
             'label_data': _floats_feature(labels[index, 0:num_labels*seq_lengths[index]])}))
         validwriter.write(example.SerializeToString())
@@ -64,7 +69,12 @@ def cpdb_to_tfrecord():
     testwriter = tf.python_io.TFRecordWriter(testfile)
     for index in test_examples:
         example = tf.train.Example(features=tf.train.Features(feature={
+            'seq_len': _int64_feature(seq_lengths[index]),
             'seq_data': _floats_feature(seqs[index, 0:num_features*seq_lengths[index]]),
             'label_data': _floats_feature(labels[index, 0:num_labels*seq_lengths[index]])}))
         testwriter.write(example.SerializeToString())
     testwriter.close()
+
+if __name__ == "__main__":
+    cpdb_to_tfrecord()
+
