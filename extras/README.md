@@ -1,6 +1,7 @@
 # extras
 ...
 ## Dataset Preparation
+See *MakeTFRecords.ipynb* notebook for example.
 
 The original dataset was prepared for Zhou & Troyanskaya (see references), 
 described in the *cpdb_readme.txt* file. This dataset consisted of proteins
