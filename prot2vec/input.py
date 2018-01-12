@@ -37,21 +37,27 @@ def cpdb_6133_input_fn(batch_size, shuffle, num_epochs, mode):
         seq_len = parsed["seq_len"]
         seq = tf.sparse_tensor_to_dense(parsed["seq_data"])
         label = tf.sparse_tensor_to_dense(parsed["label_data"])
-        seq = tf.reshape(seq, [-1, 43])
-        label = tf.reshape(label, [-1, 9])
+        src = tf.reshape(seq, [-1, 43])
+        tgt = tf.reshape(label, [-1, 9])
 
-        return seq, label
+        # prepend and append 'NoSeq' to create dec_input / dec_target
+        noseq = tf.constant([[0., 0., 0., 0., 0., 0., 0., 0., 1.]])
+        tgt_input = tf.concat([noseq, tgt], 0)
+        tgt_output = tf.concat([tgt, noseq], 0)
+
+        return src, tgt_input, tgt_output
 
     # apply parser transformation to parse out individual samples
     dataset = dataset.map(parser)
 
     if shuffle:
-        dataset = dataset.shuffle(buffer_size=64)
+        dataset = dataset.shuffle(buffer_size=128)
     dataset = dataset.repeat(num_epochs)
 
     dataset = dataset.padded_batch(
             batch_size,
             padded_shapes=(tf.TensorShape([None, 43]),
+                           tf.TensorShape([None, 9]),
                            tf.TensorShape([None, 9]))
             )
 
@@ -59,5 +65,4 @@ def cpdb_6133_input_fn(batch_size, shuffle, num_epochs, mode):
     # 3) make an iterator object
     iterator = dataset.make_one_shot_iterator()
 
-    # ((source, source_lengths), (target, target_lengths)) = iterator.get_next()
     return iterator.get_next()
