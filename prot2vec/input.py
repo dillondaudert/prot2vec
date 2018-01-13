@@ -51,7 +51,7 @@ def cpdb_6133_input_fn(batch_size, shuffle, num_epochs, mode):
     dataset = dataset.map(parser)
 
     if shuffle:
-        dataset = dataset.shuffle(buffer_size=128)
+        dataset = dataset.shuffle(buffer_size=3000)
     dataset = dataset.repeat(num_epochs)
 
     dataset = dataset.padded_batch(
