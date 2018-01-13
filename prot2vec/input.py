@@ -6,20 +6,15 @@ import tensorflow as tf
 
 HOME = str(Path.home())
 
-def cpdb_6133_input_fn(batch_size, shuffle, num_epochs, mode):
+def cpdb_dataset(filename, shuffle, batch_size=32, num_epochs=None):
     """
-    An Estimator input function using the tf.data API
+    Read the cpdb dataset and return as a TensorFlow Dataset.
+    Args:
+        filename    - a Tensor containing a list of strings of input files
+        shuffle     - a boolean Tensor
+        batch_size  - the integer size of each minibatch (Default: 32)
+        num_epochs  - how many epochs to repeat the dataset (Default: None)
     """
-
-    if mode == "TRAIN":
-        filename = HOME+"/data/cpdb/cpdb_6133_train.tfrecords"
-    elif mode == "VALID":
-        filename = HOME+"/data/cpdb/cpdb_6133_valid.tfrecords"
-    elif mode == "TEST":
-        filename = HOME+"/data/cpdb/cpdb_6133_test.tfrecords"
-    else:
-        print("Invalid mode passed to cpdb_dataset_input_fn!\n")
-        quit()
 
     # 1) define a source to construct a dataset
     dataset = tf.data.TFRecordDataset(filename)
@@ -50,8 +45,12 @@ def cpdb_6133_input_fn(batch_size, shuffle, num_epochs, mode):
     # apply parser transformation to parse out individual samples
     dataset = dataset.map(parser)
 
-    if shuffle:
+    # shuffle logic
+    def shfl(dataset):
         dataset = dataset.shuffle(buffer_size=3000)
+        return tf.no_op()
+    tf.cond(shuffle, lambda: shfl(dataset), lambda: tf.no_op())
+
     dataset = dataset.repeat(num_epochs)
 
     dataset = dataset.padded_batch(
@@ -61,8 +60,4 @@ def cpdb_6133_input_fn(batch_size, shuffle, num_epochs, mode):
                            tf.TensorShape([None, 9]))
             )
 
-
-    # 3) make an iterator object
-    iterator = dataset.make_one_shot_iterator()
-
-    return iterator.get_next()
+    return dataset
