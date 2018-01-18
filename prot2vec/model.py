@@ -1,101 +1,72 @@
 # Contains the model definition
 
-from pathlib import Path
 import tensorflow as tf
-from keras import backend as K
-from keras.callbacks import Callback, LearningRateScheduler
-from keras.utils import print_summary
 from keras.models import Model
 from keras.layers import Input, LSTMCell, RNN, Dense, Masking
-from keras.optimizers import SGD
 from input import cpdb_dataset
 
-HOME = str(Path.home())
-# data files
-train_files = [HOME+'/data/cpdb/cpdb_6133_train.tfrecords']
-valid_files = [HOME+'/data/cpdb/cpdb_6133_valid.tfrecords']
-test_files = [HOME+'/data/cpdb/cpdb_6133_test.tfrecords']
+class EncDecModel():
+    '''LSTM encoder-decoder network as multiple Keras models.'''
 
-num_features = 43
-num_targets = 9
-epochs = 5
+    models = {}
 
-# define placeholders for the dataset
-filenames = tf.placeholder(tf.string, shape=[None])
-shuffle = tf.placeholder(tf.bool)
+    def __init__(self,
+                 num_features,
+                 num_targets,
+                 src_in,
+                 tgt_in,
+                 tgt_out,
+                 filename=None):
+        self.num_features = num_features
+        self.num_targets = num_targets
+        self.src_in = src_in
+        self.tgt_in = tgt_in
+        self.tgt_out = tgt_out
+        self._create_models()
+        if filename != None:
+            # load the weights into the models
+            for model in self.models:
+                model.load_weights(filename, by_name=True)
 
-dataset = cpdb_dataset(filenames, shuffle, 32, epochs)
+    def _create_models(self):
+        '''Create Keras Model objects for training, encoding, and decoding.'''
 
-iterator = dataset.make_initializable_iterator()
+        # -- ENCODER --
+        encoder_in = Input(tensor=self.src_in)
+        # Mask out empty time steps
+        encoder_mask = Masking(mask_value=0.)(encoder_in)
 
-src_input, tgt_input, tgt_output = iterator.get_next()
+        encoder_cells = [
+            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='enc_lstm_1', unit_forget_bias=True),
+            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='enc_lstm_2', unit_forget_bias=True),
+#            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='enc_lstm_3', unit_forget_bias=True),
+#            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='enc_lstm_4', unit_forget_bias=True),
+        ]
 
+        encoder = RNN(encoder_cells, return_state=True, go_backwards=True, name='enc_rnn')
+        encoder_out = encoder(encoder_mask)
 
-# MODEL DEFINITION ---
+        # Add encoder to class.models dictionary
+        self.models['encoder'] = Model(encoder_in, encoder_out)
 
-# Define input layer
-enc_inputs = Input(tensor=src_input)
+        # -- DECODER --
+        encoder_states = encoder_out[1:]
 
-# Mask out empty time steps
-enc_masks = Masking(mask_value=0.)(enc_inputs)
+        decoder_in = Input(tensor=self.tgt_in)
+        decoder_mask = Masking(mask_value=0.)(decoder_in)
 
-# Encoder architecture
-enc_cells = [
-    LSTMCell(units=512),# dropout=0.2, recurrent_dropout=0.2),
-    LSTMCell(units=512),# dropout=0.2, recurrent_dropout=0.2),
-#    LSTMCell(units=512),# dropout=0.2, recurrent_dropout=0.2),
-]
+        decoder_cells = [
+            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='dec_lstm_1', unit_forget_bias=True),
+            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='dec_lstm_2', unit_forget_bias=True),
+#            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='dec_lstm_3', unit_forget_bias=True),
+#            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='dec_lstm_4', unit_forget_bias=True),
+        ]
+        decoder_lstm = RNN(decoder_cells, return_sequences=True, return_state=True, name='dec_rnn')
 
-enc = RNN(enc_cells, return_state=True, go_backwards=True)
-enc_out = enc(enc_masks)
-enc_states = enc_out[1:]
+        decoder_outputs = decoder_lstm(decoder_mask, initial_state=encoder_states)
 
-# Decoder architecture
-dec_inputs = Input(tensor=tgt_input)
-dec_masks = Masking(mask_value=0.)(dec_inputs)
+        decoder_dense = Dense(self.num_targets, activation='softmax', name='dec_dense')
+        decoder_out = decoder_dense(decoder_outputs[0])
 
-dec_cells = [
-    LSTMCell(units=512),# dropout=0.2, recurrent_dropout=0.2),
-    LSTMCell(units=512),# dropout=0.2, recurrent_dropout=0.2),
-#    LSTMCell(units=512),# dropout=0.2, recurrent_dropout=0.2),
-]
-dec_lstm = RNN(dec_cells, return_sequences=True, return_state=True)
-
-dec_out = dec_lstm(dec_masks, initial_state=enc_states)
-
-dec_dense = Dense(num_targets, activation='softmax')
-dec_outputs = dec_dense(dec_out[0])
-
-# Define model to turn 'enc_input_data' & 'dec_input_data' into 'dec_target_data'
-model = Model([enc_inputs, dec_inputs], dec_outputs)
-
-model.compile(optimizer='rmsprop', loss='categorical_crossentropy',
-              metrics=['accuracy'], target_tensors=[tgt_output])
-#print_summary(model, line_length=100)
-
-# training callback class
-class TrainHelper(Callback):
-    def on_train_begin(self, logs={}):
-        self.eval_metrics = []
-        self.sess = K.get_session()
-        self.sess.run(iterator.initializer, feed_dict={filenames: train_files, shuffle: True})
-
-    def on_epoch_end(self, epoch, logs):
-        # check which metrics are available
-        #print("Available metrics at on_epoch_end: %s\n" % ','.join(list(logs.keys())))
-        # evaluate the model
-        self.sess.run(iterator.initializer, feed_dict={filenames: valid_files, shuffle: False})
-        self.eval_metrics.append(self.model.evaluate(steps=7, verbose=0))
-        self.sess.run(iterator.initializer, feed_dict={filenames: train_files, shuffle: True})
-
-train_helper = TrainHelper()
-lr_rate = {0: 0.001, 1: 0.001, 2: 0.0005, 3: 0.00025, 4: 0.0001}
-lr_scheduler = LearningRateScheduler(lambda e: lr_rate[e])
-
-model.fit(steps_per_epoch=175,
-          epochs=epochs,
-          callbacks=[train_helper, lr_scheduler],
-          verbose=1)
-
-for i, metrics in enumerate(train_helper.eval_metrics):
-    print("Epoch %2d:\t%2.4f\t%.3f\n" % (i, metrics[0], metrics[1]))
+        # Define model to turn 'enc_input_data' & 'dec_input_data' into 'dec_target_data'
+        self.models['decoder'] = Model([encoder_in, decoder_in], decoder_out)
