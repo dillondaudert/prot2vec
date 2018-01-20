@@ -1,12 +1,10 @@
-# Contains the model definition
-
 import tensorflow as tf
 from keras.models import Model
-from keras.layers import Input, LSTMCell, RNN, Dense, Masking
+from keras.layers import Input, LSTM, LSTMCell, RNN, Dense, Masking, Bidirectional
 from input import cpdb_dataset
 
-class EncDecModel():
-    '''LSTM encoder-decoder network as multiple Keras models.'''
+class BDEncDecModel():
+    '''LSTM bidirectional encoder-decoder network as multiple Keras models.'''
 
     models = {}
 
@@ -36,15 +34,21 @@ class EncDecModel():
         # Mask out empty time steps
         encoder_mask = Masking(mask_value=0.)(encoder_in)
 
-        encoder_cells = [
-            LSTMCell(units=256, dropout=0.2, recurrent_dropout=0.2, name='enc_lstm_1', unit_forget_bias=True),
-            LSTMCell(units=256, dropout=0.2, recurrent_dropout=0.2, name='enc_lstm_2', unit_forget_bias=True),
-#            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='enc_lstm_3', unit_forget_bias=True),
-#            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='enc_lstm_4', unit_forget_bias=True),
-        ]
+        encoder_bd = Bidirectional(
+                         LSTM(units=128, unit_forget_bias=True, dropout=0.2, recurrent_dropout=0.2,
+                              return_sequences=True),
+                         name='enc1_bd'
+                         )(encoder_mask)
 
-        encoder = RNN(encoder_cells, return_state=True, go_backwards=True, name='enc_rnn')
-        encoder_out = encoder(encoder_mask)
+        # encoder_bd has shape (batch_size, time_steps, units)
+
+        encoder_cells = [
+            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='enc2', unit_forget_bias=True),
+            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='enc3', unit_forget_bias=True),
+            ]
+
+        encoder = RNN(encoder_cells, return_state=True, name='enc_stack')
+        encoder_out = encoder(encoder_bd)
 
         # Add encoder to class.models dictionary
         self.models['encoder'] = Model(encoder_in, encoder_out)
@@ -56,12 +60,10 @@ class EncDecModel():
         decoder_mask = Masking(mask_value=0.)(decoder_in)
 
         decoder_cells = [
-            LSTMCell(units=256, dropout=0.2, recurrent_dropout=0.2, name='dec_lstm_1', unit_forget_bias=True),
-            LSTMCell(units=256, dropout=0.2, recurrent_dropout=0.2, name='dec_lstm_2', unit_forget_bias=True),
-#            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='dec_lstm_3', unit_forget_bias=True),
-#            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='dec_lstm_4', unit_forget_bias=True),
-        ]
-        decoder_lstm = RNN(decoder_cells, return_sequences=True, return_state=True, name='dec_rnn')
+            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='dec1', unit_forget_bias=True),
+            LSTMCell(units=128, dropout=0.2, recurrent_dropout=0.2, name='dec2', unit_forget_bias=True),
+            ]
+        decoder_lstm = RNN(decoder_cells, return_sequences=True, return_state=True, name='dec_stack')
 
         decoder_outputs = decoder_lstm(decoder_mask, initial_state=encoder_states)
 

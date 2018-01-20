@@ -7,6 +7,7 @@ from keras.optimizers import SGD
 # local imports
 from input import cpdb_dataset
 from model import EncDecModel
+from bd_model import BDEncDecModel
 
 HOME = str(Path.home())
 
@@ -66,7 +67,7 @@ class ValidationMonitor(Callback):
 
     def on_train_end(self, logs=None):
         if self.stopped_epoch > 0 and self.verbose > 0:
-            print('Epoch %05d: early stopping' % (self.stopped_epoch + 1))
+            print('Epoch %2d: early stopping' % (self.stopped_epoch + 1))
 
 if __name__ == '__main__':
     num_features = 43
@@ -98,10 +99,10 @@ if __name__ == '__main__':
 
 
     val_monitor = ValidationMonitor(train_files, valid_files, True, 1e-2, 2, 2)
-    lr_rate = [0.001, 0.001, 0.0005, 0.00025, 0.0001]
+    lr_rate = [1e-3, 1e-3, 5e-4, 2.5e-4, 1e-4, 5e-5, 2.5e-5, 1e-5, 1e-5, 1e-5]
     lr_scheduler = LearningRateScheduler(lambda e: lr_rate[e])
 
     model.fit(steps_per_epoch=175,
               epochs=epochs,
-              callbacks=[val_monitor],
+              callbacks=[val_monitor, lr_scheduler],
               verbose=1)
