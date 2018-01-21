@@ -76,7 +76,7 @@ def cpdb_to_tfrecord():
     testwriter.close()
 
 
-def cpdb_filt_to_tfrecord():
+def cpdb_filt_to_tfrecord(ind):
     """
     Convert the numpy array format for cpdb files to TFRecord format
     Saves training and validation splits
@@ -85,10 +85,11 @@ def cpdb_filt_to_tfrecord():
     data = np.load(HOME+"/data/cpdb/cpdb_6133_filtered.npy.gz").reshape(-1, 700, 57)
     # get indices for train/valid sets
     num_samples = data.shape[0]
-    num_train = int(num_samples * 0.92)
+    num_train = num_samples - 256
     print("Splitting into %d training, %d validation" % (num_train, (num_samples-num_train)))
 
     # shuffle data
+    np.random.seed(None)
     data = np.random.permutation(data)
 
     # calculate mean/stdev for pssm features
@@ -117,8 +118,8 @@ def cpdb_filt_to_tfrecord():
     train_examples = range(num_train)
     valid_examples = range(num_train,num_samples)
 
-    trainfile = HOME+"/data/cpdb/cpdb_6133_filter_train.tfrecords"
-    validfile = HOME+"/data/cpdb/cpdb_6133_filter_valid.tfrecords"
+    trainfile = HOME+"/data/cpdb/cpdb_6133_filter_train_"+str(ind)+".tfrecords"
+    validfile = HOME+"/data/cpdb/cpdb_6133_filter_valid_"+str(ind)+".tfrecords"
     print("Writing ", trainfile)
     trainwriter = tf.python_io.TFRecordWriter(trainfile)
 
