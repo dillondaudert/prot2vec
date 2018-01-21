@@ -3,7 +3,6 @@
 import tensorflow as tf
 from keras.models import Model
 from keras.layers import Input, LSTMCell, RNN, Dense, Masking
-from input import cpdb_dataset
 
 class EncDecModel():
     '''LSTM encoder-decoder network as multiple Keras models.'''

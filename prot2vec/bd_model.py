@@ -1,7 +1,6 @@
 import tensorflow as tf
 from keras.models import Model
 from keras.layers import Input, LSTM, LSTMCell, RNN, Dense, Masking, Bidirectional
-from input import cpdb_dataset
 
 class BDEncDecModel():
     '''LSTM bidirectional encoder-decoder network as multiple Keras models.'''
