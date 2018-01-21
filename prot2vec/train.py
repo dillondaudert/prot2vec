@@ -72,38 +72,44 @@ class ValidationMonitor(Callback):
 if __name__ == '__main__':
     num_features = 43
     num_targets = 9
-    epochs = 10
-    # data files
-    train_files = [HOME+'/data/cpdb/cpdb_6133_train.tfrecords']
-    valid_files = [HOME+'/data/cpdb/cpdb_6133_valid.tfrecords']
-    test_files = [HOME+'/data/cpdb/cpdb_6133_test.tfrecords']
+    epochs = 1
 
-    # define placeholders for the dataset
-    filenames = tf.placeholder(tf.string, shape=[None])
-    shuffle = tf.placeholder(tf.bool)
+    for i in range(1, 2):
+        print("CROSS VALIDATION: FOLD %d\n----------------\n" % (i))
+        # data files
+        train_files = [HOME+'/data/cpdb/cpdb_6133_filter_train_'+str(i)+'.tfrecords']
+        valid_files = [HOME+'/data/cpdb/cpdb_6133_filter_valid_'+str(i)+'.tfrecords']
 
-    dataset = pssp_dataset(filenames, shuffle, 32, epochs)
+        # define placeholders for the dataset
+        filenames = tf.placeholder(tf.string, shape=[None])
+        shuffle = tf.placeholder(tf.bool)
 
-    iterator = dataset.make_initializable_iterator()
+        dataset = pssp_dataset(filenames, shuffle, 32, epochs)
 
-    src_input, tgt_input, tgt_output = iterator.get_next()
+        iterator = dataset.make_initializable_iterator()
 
-    encdec = EncDecModel(num_features, num_targets, src_input, tgt_input, tgt_output)
+        src_input, tgt_input, tgt_output = iterator.get_next()
 
-    model = encdec.models['decoder']
+        encdec = EncDecModel(num_features, num_targets, src_input, tgt_input, tgt_output)
 
-    adam = Adam(clipnorm=5.0)
-    model.compile(optimizer=adam,
-            loss='categorical_crossentropy',
-            metrics=['accuracy'],
-            target_tensors=[tgt_output])
+        model = encdec.models['decoder']
+
+        adam = Adam(clipnorm=5.0)
+        model.compile(optimizer=adam,
+                loss='categorical_crossentropy',
+                metrics=['accuracy'],
+                target_tensors=[tgt_output])
 
 
-    val_monitor = ValidationMonitor(train_files, valid_files, True, 1e-2, 2, 2)
-    lr_rate = [1e-3, 1e-3, 5e-4, 2.5e-4, 1e-4, 5e-5, 2.5e-5, 1e-5, 1e-5, 1e-5]
-    lr_scheduler = LearningRateScheduler(lambda e: lr_rate[e])
+        val_monitor = ValidationMonitor(train_files, valid_files, True, 1e-2, 2, 2)
+        lr_rate = [1e-3, 1e-3, 5e-4, 2.5e-4, 1e-4, 5e-5, 2.5e-5, 1e-5, 1e-5, 1e-5]
+        lr_scheduler = LearningRateScheduler(lambda e: lr_rate[e])
 
-    model.fit(steps_per_epoch=175,
-              epochs=epochs,
-              callbacks=[val_monitor, lr_scheduler],
-              verbose=1)
+        model.fit(steps_per_epoch=20,
+                  epochs=epochs,
+                  callbacks=[val_monitor, lr_scheduler],
+                  verbose=1)
+
+        model.save_weights('test_weights.h5')
+        print("Clearing session...")
+        K.clear_session()
