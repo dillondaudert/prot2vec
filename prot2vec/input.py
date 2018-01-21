@@ -51,6 +51,8 @@ def pssp_dataset(filename, shuffle, batch_size=32, num_epochs=None):
 
     dataset = dataset.repeat(num_epochs)
 
+    dataset = dataset.prefetch(128)
+
     dataset = dataset.padded_batch(
             batch_size,
             padded_shapes=(tf.TensorShape([None, 43]),
