@@ -3,9 +3,9 @@ import tensorflow as tf, numpy as np
 from keras import backend as K
 from keras.callbacks import Callback, LearningRateScheduler
 from keras.utils import print_summary
-from keras.optimizers import SGD
+from keras.optimizers import SGD, Adam
 # local imports
-from input import cpdb_dataset
+from input import pssp_dataset, encode_dataset
 from model import EncDecModel
 from bd_model import BDEncDecModel
 
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     filenames = tf.placeholder(tf.string, shape=[None])
     shuffle = tf.placeholder(tf.bool)
 
-    dataset = cpdb_dataset(filenames, shuffle, 32, epochs)
+    dataset = pssp_dataset(filenames, shuffle, 32, epochs)
 
     iterator = dataset.make_initializable_iterator()
 
@@ -92,7 +92,8 @@ if __name__ == '__main__':
 
     model = encdec.models['decoder']
 
-    model.compile(optimizer='rmsprop',
+    adam = Adam(clipnorm=5.0)
+    model.compile(optimizer=adam,
             loss='categorical_crossentropy',
             metrics=['accuracy'],
             target_tensors=[tgt_output])
