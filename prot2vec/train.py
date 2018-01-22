@@ -75,11 +75,14 @@ if __name__ == '__main__':
     epochs = 10
     savedir = HOME+"/thesis/models/encdec1"
 
-    for i in range(1, 10):
-        print("CROSS VALIDATION: FOLD %d\n----------------" % (i))
+    # we only want 5-fold CV, on a random set of 5 of 10 train/valid splits
+    splits = np.random.choice([i for i in range(1,11)], 5, replace=False)
+
+    for i in range(0, 5):
+        print("Cross Validation: Fold %d\nTraining on dataset %d" % (i+1, splits[i]))
         # data files
-        train_files = [HOME+'/data/cpdb/cpdb_6133_filter_train_'+str(i)+'.tfrecords']
-        valid_files = [HOME+'/data/cpdb/cpdb_6133_filter_valid_'+str(i)+'.tfrecords']
+        train_files = [HOME+'/data/cpdb/cpdb_6133_filter_train_'+str(splits[i])+'.tfrecords']
+        valid_files = [HOME+'/data/cpdb/cpdb_6133_filter_valid_'+str(splits[i])+'.tfrecords']
 
         # define placeholders for the dataset
         filenames = tf.placeholder(tf.string, shape=[None])
@@ -95,7 +98,7 @@ if __name__ == '__main__':
 
         model = encdec.models['decoder']
 
-        adam = Adam(clipnorm=5.0)
+        adam = Adam(clipnorm=3.0)
         model.compile(optimizer=adam,
                 loss='categorical_crossentropy',
                 metrics=['accuracy'],
@@ -111,6 +114,6 @@ if __name__ == '__main__':
                   callbacks=[val_monitor, lr_scheduler],
                   verbose=1)
 
-        model.save_weights(savedir+"/cv_"+str(i)+"_weights.h5")
+        model.save_weights(savedir+"/cv_"+str(i+1)+"_weights.h5")
         print("Clearing session...")
         K.clear_session()
