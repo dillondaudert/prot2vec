@@ -32,7 +32,7 @@ class ValidationMonitor(Callback):
         self.eval_metrics = []
         self.wait = 0
         self.stopped_epoch = 0
-        self.best = np.Inf
+        self.best = -np.Inf
         # initialize dataset pipeline
         self.sess = K.get_session()
         self.sess.run(iterator.initializer, feed_dict={filenames: train_files, shuffle: True})
@@ -42,7 +42,7 @@ class ValidationMonitor(Callback):
         #print("Available metrics at on_epoch_end: %s\n" % ','.join(list(logs.keys())))
         # evaluate the model
         self.sess.run(iterator.initializer, feed_dict={filenames: valid_files, shuffle: False})
-        eval_metrics = self.model.evaluate(steps=7, verbose=0)
+        eval_metrics = self.model.evaluate(steps=2, verbose=0)
         self.eval_metrics.append(eval_metrics)
         self.sess.run(iterator.initializer, feed_dict={filenames: train_files, shuffle: True})
 
@@ -53,10 +53,10 @@ class ValidationMonitor(Callback):
 
 
         if self.stop_early:
-            current = eval_metrics[0]
+            current = eval_metrics[1]
 
-            # if the validation loss has decreased by at least min_delta
-            if current + self.min_delta < self.best:
+            # if the validation accuracy has increased by at least min_delta
+            if current - self.min_delta < self.best:
                 self.best = current
                 self.wait = 0
             else:
@@ -72,10 +72,11 @@ class ValidationMonitor(Callback):
 if __name__ == '__main__':
     num_features = 43
     num_targets = 9
-    epochs = 1
+    epochs = 10
+    savedir = HOME+"/thesis/models/encdec1"
 
-    for i in range(1, 2):
-        print("CROSS VALIDATION: FOLD %d\n----------------\n" % (i))
+    for i in range(1, 10):
+        print("CROSS VALIDATION: FOLD %d\n----------------" % (i))
         # data files
         train_files = [HOME+'/data/cpdb/cpdb_6133_filter_train_'+str(i)+'.tfrecords']
         valid_files = [HOME+'/data/cpdb/cpdb_6133_filter_valid_'+str(i)+'.tfrecords']
@@ -84,7 +85,7 @@ if __name__ == '__main__':
         filenames = tf.placeholder(tf.string, shape=[None])
         shuffle = tf.placeholder(tf.bool)
 
-        dataset = pssp_dataset(filenames, shuffle, 32, epochs)
+        dataset = pssp_dataset(filenames, shuffle, 128, epochs)
 
         iterator = dataset.make_initializable_iterator()
 
@@ -101,15 +102,15 @@ if __name__ == '__main__':
                 target_tensors=[tgt_output])
 
 
-        val_monitor = ValidationMonitor(train_files, valid_files, True, 1e-2, 2, 2)
-        lr_rate = [1e-3, 1e-3, 5e-4, 2.5e-4, 1e-4, 5e-5, 2.5e-5, 1e-5, 1e-5, 1e-5]
+        val_monitor = ValidationMonitor(train_files, valid_files, True, 1e-3, 2, 2)
+        lr_rate = [1e-3, 1e-3, 1e-3, 5e-4, 2.5e-4, 1e-4, 5e-5, 2.5e-5, 1e-5, 1e-5]
         lr_scheduler = LearningRateScheduler(lambda e: lr_rate[e])
 
-        model.fit(steps_per_epoch=20,
+        model.fit(steps_per_epoch=41,
                   epochs=epochs,
                   callbacks=[val_monitor, lr_scheduler],
                   verbose=1)
 
-        model.save_weights('test_weights.h5')
+        model.save_weights(savedir+"/cv_"+str(i)+"_weights.h5")
         print("Clearing session...")
         K.clear_session()
