@@ -45,13 +45,13 @@ def pssp_dataset(filename, shuffle, batch_size=32, num_epochs=None):
 
     # shuffle logic
     def shfl(dataset):
-        dataset = dataset.shuffle(buffer_size=3000)
+        dataset = dataset.shuffle(buffer_size=6000)
         return tf.no_op()
     tf.cond(shuffle, lambda: shfl(dataset), lambda: tf.no_op())
 
     dataset = dataset.repeat(num_epochs)
 
-    dataset = dataset.prefetch(128)
+    dataset = dataset.prefetch(256)
 
     dataset = dataset.padded_batch(
             batch_size,
