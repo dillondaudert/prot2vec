@@ -40,18 +40,19 @@ def pssp_dataset(filename, shuffle, batch_size=32, num_epochs=None):
 
         return src, tgt_input, tgt_output
 
-    # apply parser transformation to parse out individual samples
-    dataset = dataset.map(parser)
 
     # shuffle logic
     def shfl(dataset):
+#        dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=6000, count=num_epochs))
         dataset = dataset.shuffle(buffer_size=6000)
+        dataset = dataset.repeat(num_epochs)
         return tf.no_op()
     tf.cond(shuffle, lambda: shfl(dataset), lambda: tf.no_op())
 
-    dataset = dataset.repeat(num_epochs)
+    # apply parser transformation to parse out individual samples
+    dataset = dataset.map(parser, num_parallel_calls=4)
 
-    dataset = dataset.prefetch(256)
+#    dataset = dataset.cache()
 
     dataset = dataset.padded_batch(
             batch_size,
@@ -59,6 +60,8 @@ def pssp_dataset(filename, shuffle, batch_size=32, num_epochs=None):
                            tf.TensorShape([None, 9]),
                            tf.TensorShape([None, 9]))
             )
+
+    dataset = dataset.prefetch(1)
 
     return dataset
 
