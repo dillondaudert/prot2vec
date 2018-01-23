@@ -37,6 +37,8 @@ class EncDecModel():
 
         encoder_cells = [
             LSTMCell(units=256, dropout=0.2, recurrent_dropout=0.2, name='enc_lstm_1', unit_forget_bias=True),
+            LSTMCell(units=256, dropout=0.2, recurrent_dropout=0.2, name='enc_lstm_2', unit_forget_bias=True),
+            LSTMCell(units=256, dropout=0.2, recurrent_dropout=0.2, name='enc_lstm_3', unit_forget_bias=True),
         ]
 
         encoder = RNN(encoder_cells, return_state=True, go_backwards=True, name='enc_rnn')
@@ -53,6 +55,8 @@ class EncDecModel():
 
         decoder_cells = [
             LSTMCell(units=256, dropout=0.2, recurrent_dropout=0.2, name='dec_lstm_1', unit_forget_bias=True),
+            LSTMCell(units=256, dropout=0.2, recurrent_dropout=0.2, name='dec_lstm_2', unit_forget_bias=True),
+            LSTMCell(units=256, dropout=0.2, recurrent_dropout=0.2, name='dec_lstm_3', unit_forget_bias=True),
         ]
         decoder_lstm = RNN(decoder_cells, return_sequences=True, return_state=True, name='dec_rnn')
 

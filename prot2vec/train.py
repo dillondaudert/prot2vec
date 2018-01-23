@@ -32,7 +32,7 @@ class ValidationMonitor(Callback):
         self.eval_metrics = []
         self.wait = 0
         self.stopped_epoch = 0
-        self.best = -np.Inf
+        self.best = np.Inf
         # initialize dataset pipeline
         self.sess = K.get_session()
         self.sess.run(iterator.initializer, feed_dict={filenames: train_files, shuffle: True})
@@ -42,21 +42,21 @@ class ValidationMonitor(Callback):
         #print("Available metrics at on_epoch_end: %s\n" % ','.join(list(logs.keys())))
         # evaluate the model
         self.sess.run(iterator.initializer, feed_dict={filenames: valid_files, shuffle: False})
-        eval_metrics = self.model.evaluate(steps=2, verbose=0)
+        eval_metrics = self.model.evaluate(steps=4, verbose=0)
         self.eval_metrics.append(eval_metrics)
         self.sess.run(iterator.initializer, feed_dict={filenames: train_files, shuffle: True})
 
         if self.verbose > 1:
             print('\nEvaluation Metrics: ')
             for metric, val in zip(self.model.metrics_names, eval_metrics):
-                print('%s: %2.2f\t' % (metric, val))
+                print('%s: %2.4f\t' % (metric, val))
 
 
         if self.stop_early:
-            current = eval_metrics[1]
+            current = eval_metrics[0]
 
-            # if the validation accuracy has increased by at least min_delta
-            if current - self.min_delta < self.best:
+            # if the validation loss has decreased by at least min_delta
+            if current + self.min_delta < self.best:
                 self.best = current
                 self.wait = 0
             else:
@@ -73,22 +73,19 @@ if __name__ == '__main__':
     num_features = 43
     num_targets = 9
     epochs = 10
-    savedir = HOME+"/thesis/models/encdec1"
-
-    # we only want 5-fold CV, on a random set of 5 of 10 train/valid splits
-    splits = np.random.choice([i for i in range(1,11)], 5, replace=False)
+    savedir = HOME+"/thesis/models/encdec3"
 
     for i in range(0, 5):
-        print("Cross Validation: Fold %d\nTraining on dataset %d" % (i+1, splits[i]))
+        print("Cross Validation: Fold %d\nTraining on dataset %d" % (i+1, i+1))
         # data files
-        train_files = [HOME+'/data/cpdb/cpdb_6133_filter_train_'+str(splits[i])+'.tfrecords']
-        valid_files = [HOME+'/data/cpdb/cpdb_6133_filter_valid_'+str(splits[i])+'.tfrecords']
+        train_files = [HOME+'/data/cpdb/cpdb_6133_filter_train_'+str(i+1)+'.tfrecords']
+        valid_files = [HOME+'/data/cpdb/cpdb_6133_filter_valid_'+str(i+1)+'.tfrecords']
 
         # define placeholders for the dataset
         filenames = tf.placeholder(tf.string, shape=[None])
         shuffle = tf.placeholder(tf.bool)
 
-        dataset = pssp_dataset(filenames, shuffle, 128, epochs)
+        dataset = pssp_dataset(filenames, shuffle, 64, epochs)
 
         iterator = dataset.make_initializable_iterator()
 
@@ -98,18 +95,24 @@ if __name__ == '__main__':
 
         model = encdec.models['decoder']
 
-        adam = Adam(clipnorm=3.0)
-        model.compile(optimizer=adam,
+        opt = Adam(clipnorm=5.0, lr=0.7)
+        model.compile(optimizer=opt,
                 loss='categorical_crossentropy',
                 metrics=['accuracy'],
                 target_tensors=[tgt_output])
 
 
-        val_monitor = ValidationMonitor(train_files, valid_files, True, 1e-3, 2, 2)
+        val_monitor = ValidationMonitor(train_files,
+                valid_files,
+                stop_early=True,
+                min_delta=1e-2,
+                patience=3,
+                verbose=2)
+#        lr_rate = [1e-3, 1e-3, 1e-3, 5e-4, 2.5e-4, 1e-4, 5e-5, 2.5e-5, 1e-5, 1e-5]
         lr_rate = [1e-3, 1e-3, 1e-3, 5e-4, 2.5e-4, 1e-4, 5e-5, 2.5e-5, 1e-5, 1e-5]
         lr_scheduler = LearningRateScheduler(lambda e: lr_rate[e])
 
-        model.fit(steps_per_epoch=41,
+        model.fit(steps_per_epoch=82,
                   epochs=epochs,
                   callbacks=[val_monitor, lr_scheduler],
                   verbose=1)
