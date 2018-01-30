@@ -2,6 +2,7 @@
 from pathlib import Path
 import numpy as np
 import tensorflow as tf
+from sklearn.model_selection import KFold
 
 HOME = str(Path.home())
 
@@ -76,20 +77,20 @@ def cpdb_to_tfrecord():
     testwriter.close()
 
 
-def cpdb_filt_to_tfrecord(ind):
+def cpdb_filt_to_tfrecord():
     """
     Convert the numpy array format for cpdb files to TFRecord format
-    Saves training and validation splits
+    Saves training and validation splits using KFold
     """
 
+    #TODO: Consolidate various aspects of these functions (such as get_length) for DNRY
+    #      and to make everything simpler
+
     data = np.load(HOME+"/data/cpdb/cpdb_6133_filtered.npy.gz").reshape(-1, 700, 57)
-    # get indices for train/valid sets
     num_samples = data.shape[0]
-    num_train = num_samples - 256
-    print("Splitting into %d training, %d validation" % (num_train, (num_samples-num_train)))
 
     # shuffle data
-    np.random.seed(None)
+    np.random.seed(248317)
     data = np.random.permutation(data)
 
     # calculate mean/stdev for pssm features
@@ -115,31 +116,35 @@ def cpdb_filt_to_tfrecord(ind):
     # Flatten labels
     labels = labels.reshape(num_samples, -1)
 
-    train_examples = range(num_train)
-    valid_examples = range(num_train,num_samples)
+    # Calculate the indices of the 10 folds:
+    kf = KFold(n_splits=10)
+    fold = 0
+    for train_inds, valid_inds in kf.split(np.arange(num_samples)):
+        fold += 1
+        print("Creating fold %d: Train %d, Valid %d\n" % (fold, train_inds.size, valid_inds.size))
 
-    trainfile = HOME+"/data/cpdb/cpdb_6133_filter_train_"+str(ind)+".tfrecords"
-    validfile = HOME+"/data/cpdb/cpdb_6133_filter_valid_"+str(ind)+".tfrecords"
-    print("Writing ", trainfile)
-    trainwriter = tf.python_io.TFRecordWriter(trainfile)
+        trainfile = HOME+"/data/cpdb/cpdb_6133_filter_train_"+str(fold)+".tfrecords"
+        validfile = HOME+"/data/cpdb/cpdb_6133_filter_valid_"+str(fold)+".tfrecords"
+        print("Writing ", trainfile)
+        trainwriter = tf.python_io.TFRecordWriter(trainfile)
 
-    for index in train_examples:
-        example = tf.train.Example(features=tf.train.Features(feature={
-#            'seq_len': _int64_feature(seq_lengths[index]),
-            'seq_data': _floats_feature(seqs[index, 0:num_features*seq_lengths[index]]),
-            'label_data': _floats_feature(labels[index, 0:num_labels*seq_lengths[index]])}))
-        trainwriter.write(example.SerializeToString())
-    trainwriter.close()
+        for index in train_inds:
+            example = tf.train.Example(features=tf.train.Features(feature={
+                'seq_len': _int64_feature(seq_lengths[index]),
+                'seq_data': _floats_feature(seqs[index, 0:num_features*seq_lengths[index]]),
+                'label_data': _floats_feature(labels[index, 0:num_labels*seq_lengths[index]])}))
+            trainwriter.write(example.SerializeToString())
+        trainwriter.close()
 
-    print("Writing ", validfile)
-    validwriter = tf.python_io.TFRecordWriter(validfile)
-    for index in valid_examples:
-        example = tf.train.Example(features=tf.train.Features(feature={
-#            'seq_len': _int64_feature(seq_lengths[index]),
-            'seq_data': _floats_feature(seqs[index, 0:num_features*seq_lengths[index]]),
-            'label_data': _floats_feature(labels[index, 0:num_labels*seq_lengths[index]])}))
-        validwriter.write(example.SerializeToString())
-    validwriter.close()
+        print("Writing ", validfile)
+        validwriter = tf.python_io.TFRecordWriter(validfile)
+        for index in valid_inds:
+            example = tf.train.Example(features=tf.train.Features(feature={
+                'seq_len': _int64_feature(seq_lengths[index]),
+                'seq_data': _floats_feature(seqs[index, 0:num_features*seq_lengths[index]]),
+                'label_data': _floats_feature(labels[index, 0:num_labels*seq_lengths[index]])}))
+            validwriter.write(example.SerializeToString())
+        validwriter.close()
 
 def cpdb_513_to_tfrecord():
     """
@@ -179,7 +184,7 @@ def cpdb_513_to_tfrecord():
 
     for index in range(num_samples):
         example = tf.train.Example(features=tf.train.Features(feature={
-#            'seq_len': _int64_feature(seq_lengths[index]),
+            'seq_len': _int64_feature(seq_lengths[index]),
             'seq_data': _floats_feature(seqs[index, 0:num_features*seq_lengths[index]]),
             'label_data': _floats_feature(labels[index, 0:num_labels*seq_lengths[index]])}))
         writer.write(example.SerializeToString())
