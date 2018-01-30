@@ -14,13 +14,11 @@ class EncDecModel():
                  src_in,
                  tgt_in,
                  tgt_out,
-                 filename=None
-                 teacher_forcing=True):
+                 filename=None):
         self.num_targets = num_targets
         self.src_in = src_in
         self.tgt_in = tgt_in
         self.tgt_out = tgt_out
-        self.teacher_forcing = teacher_forcing
         self._create_models()
         if filename != None:
             # load the weights into the models

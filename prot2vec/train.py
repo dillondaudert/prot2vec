@@ -72,8 +72,8 @@ class ValidationMonitor(Callback):
 if __name__ == '__main__':
     num_features = 43
     num_targets = 9
-    epochs = 10
-    savedir = HOME+"/thesis/models/encdec3"
+    epochs = 8
+    savedir = HOME+"/thesis/models/encdec1_512"
 
     for i in range(0, 5):
         print("Cross Validation: Fold %d\nTraining on dataset %d" % (i+1, i+1))
@@ -91,11 +91,11 @@ if __name__ == '__main__':
 
         src_input, tgt_input, tgt_output = iterator.get_next()
 
-        encdec = EncDecModel(num_features, num_targets, src_input, tgt_input, tgt_output)
+        encdec = EncDecModel(num_targets, src_input, tgt_input, tgt_output)
 
         model = encdec.models['decoder']
 
-        opt = Adam(clipnorm=5.0, lr=0.7)
+        opt = Adam(clipnorm=4.0)
         model.compile(optimizer=opt,
                 loss='categorical_crossentropy',
                 metrics=['accuracy'],
@@ -105,16 +105,16 @@ if __name__ == '__main__':
         val_monitor = ValidationMonitor(train_files,
                 valid_files,
                 stop_early=True,
-                min_delta=1e-2,
-                patience=3,
+                min_delta=5e-3,
+                patience=2,
                 verbose=2)
 #        lr_rate = [1e-3, 1e-3, 1e-3, 5e-4, 2.5e-4, 1e-4, 5e-5, 2.5e-5, 1e-5, 1e-5]
-        lr_rate = [1e-3, 1e-3, 1e-3, 5e-4, 2.5e-4, 1e-4, 5e-5, 2.5e-5, 1e-5, 1e-5]
-        lr_scheduler = LearningRateScheduler(lambda e: lr_rate[e])
+#        lr_rate = [1e-3, 1e-3, 1e-3, 5e-4, 2.5e-4, 1e-4, 5e-5, 2.5e-5, 1e-5, 1e-5]
+#        lr_scheduler = LearningRateScheduler(lambda e: lr_rate[e])
 
         model.fit(steps_per_epoch=82,
                   epochs=epochs,
-                  callbacks=[val_monitor, lr_scheduler],
+                  callbacks=[val_monitor],
                   verbose=1)
 
         model.save_weights(savedir+"/cv_"+str(i+1)+"_weights.h5")
