@@ -22,12 +22,14 @@ def pssp_dataset(filename, shuffle, batch_size=32, num_epochs=None):
     # use tf.parse_single_example() to extract data from a tf.Example proto buffer
     def parser(record):
         keys_to_features = {
+            "seq_len": tf.FixedLenFeature([], tf.int64),
             "seq_data": tf.VarLenFeature(tf.float32),
             "label_data": tf.VarLenFeature(tf.float32),
             }
 
         parsed = tf.parse_single_example(record, keys_to_features)
 
+        seq_len = parsed["seq_len"]
         seq = tf.sparse_tensor_to_dense(parsed["seq_data"])
         label = tf.sparse_tensor_to_dense(parsed["label_data"])
         src = tf.reshape(seq, [-1, 43])
