@@ -40,7 +40,7 @@ def pssp_dataset(filename, shuffle, batch_size=32, num_epochs=None):
         tgt_input = tf.concat([noseq, tgt], 0)
         tgt_output = tf.concat([tgt, noseq], 0)
 
-        return src, tgt_input, tgt_output
+        return src, tgt_input, tgt_output, seq_len
 
 
     # shuffle logic
@@ -60,7 +60,8 @@ def pssp_dataset(filename, shuffle, batch_size=32, num_epochs=None):
             batch_size,
             padded_shapes=(tf.TensorShape([None, 43]),
                            tf.TensorShape([None, 9]),
-                           tf.TensorShape([None, 9]))
+                           tf.TensorShape([None, 9]),
+                           tf.TensorShape([]))
             )
 
     dataset = dataset.prefetch(1)
