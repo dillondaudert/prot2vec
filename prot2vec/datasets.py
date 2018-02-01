@@ -30,6 +30,7 @@ def pssp_dataset(filename, shuffle, batch_size=32, num_epochs=None):
         parsed = tf.parse_single_example(record, keys_to_features)
 
         seq_len = parsed["seq_len"]
+        seq_len = tf.cast(seq_len, tf.int32)
         seq = tf.sparse_tensor_to_dense(parsed["seq_data"])
         label = tf.sparse_tensor_to_dense(parsed["label_data"])
         src = tf.reshape(seq, [-1, 43])
