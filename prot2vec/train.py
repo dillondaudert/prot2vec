@@ -12,7 +12,7 @@ hparams = tf.contrib.training.HParams(
     num_labels=9,
     batch_size=32,
     num_epochs=1,
-    learning_rate=0.01,
+    learning_rate=0.007,
     unit_type="lstm",
     num_units=128,
     num_layers=1,
@@ -84,16 +84,30 @@ with train_graph.as_default():
 
     final_outputs, final_states, final_sequence_len = tf.contrib.seq2seq.dynamic_decode(
             decoder,
+            impute_finished=True,
            # maximum_iterations=tf.reduce_max(seq_len),
             scope="decoder")
 
     logits = final_outputs.rnn_output
 
-    #NOTE: for TF1.5, this should be "softmax_cross_entropy_with_logits_v2"
-    crossent = tf.nn.softmax_cross_entropy_with_logits(logits=logits,
-                                                       labels=dec_outputs,
-                                                       name="crossent")
-    train_loss = (tf.reduce_sum(crossent)/hparams.batch_size)
+    # mask out entries longer than seq_len
+    mask = tf.sequence_mask(tgt_seq_len, dtype=tf.float32)
+
+    crossent = tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits,
+                                                          labels=dec_outputs,
+                                                          name="crossent")
+
+    # NOTE: this part will likely go into the Eval graph
+    predictions = tf.argmax(input=logits, axis=-1)
+    targets = tf.argmax(input=dec_outputs, axis=-1)
+#    _, acc = tf.metrics.accuracy(labels=targets,
+#                                 predictions=predictions)
+    acc = tf.contrib.metrics.accuracy(predictions=predictions,
+                                      labels=targets)
+
+
+
+    train_loss = (tf.reduce_sum(crossent*mask)/hparams.batch_size)
 
     global_step = tf.Variable(0, name="global_step", trainable=False)
 
@@ -109,11 +123,21 @@ with train_graph.as_default():
                 zip(clipped_gradients, params), global_step=global_step)
 
     initializer = tf.global_variables_initializer()
+    loc_initializer = tf.local_variables_initializer()
+
 
 train_sess = tf.Session(graph=train_graph)
 
-train_sess.run(initializer)
+train_sess.run([initializer, loc_initializer])
 
-for i in range(50):
-    _, loss_val = train_sess.run([update_step, train_loss])
-    print("Step: %d, Loss %f" % (i, loss_val))
+# print out the input sequence length, output sequence length:
+#preds, tgts = train_sess.run([predictions, targets])
+#print("predictions: ", preds)
+#print("targets: ", tgts)
+#print("cross entropy: (shape): ", cross_ent.shape)
+#print(cross_ent)
+#quit()
+
+for i in range(100):
+    _, loss_val, accuracy = train_sess.run([update_step, train_loss, acc])
+    print("Step: %d, Loss %f, Acc: %f" % (i, loss_val, accuracy))
