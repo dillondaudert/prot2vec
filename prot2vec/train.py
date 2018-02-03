@@ -2,6 +2,7 @@
 import tensorflow as tf
 from datasets import pssp_dataset
 from model_helper import *
+import model
 from hparams.default import get_default_hparams
 
 train_files = ["/home/dillon/data/cpdb/cpdb_6133_filter_train_%d.tfrecords" % (i) for i in range(1, 11)]
@@ -11,6 +12,7 @@ test_files = ["/home/dillon/data/cpdb/cpdb_513.tf_records"]
 hparams = get_default_hparams()
 
 train_graph = tf.Graph()
+eval_graph = tf.Graph()
 
 # build training graph
 with train_graph.as_default():
@@ -18,112 +20,58 @@ with train_graph.as_default():
                                  tf.constant(True, tf.bool),
                                  batch_size=hparams.batch_size,
                                  num_epochs=hparams.num_epochs)
-    train_iterator = train_dataset.make_one_shot_iterator()
+    train_iterator = train_dataset.make_initializable_iterator()
 
-    # build model
-    enc_inputs, dec_inputs, dec_outputs, seq_len = train_iterator.get_next()
-
-    # create encoder
-    enc_cells = create_rnn_cell(unit_type=hparams.unit_type,
-                                  num_units=hparams.num_units,
-                                  num_layers=hparams.num_layers,
-                                  num_residual_layers=hparams.num_residual_layers,
-                                  forget_bias=hparams.forget_bias,
-                                  dropout=hparams.dropout,
-                                  mode=tf.contrib.learn.ModeKeys.TRAIN)
-
-    # Run encoder
-    # Input shape:
-    #   enc_inputs: [batch_size, max_len, num_features]
-    # Output shapes:
-    #   enc_outputs: [batch_size, max_len, cell.output_size]
-    #   enc_state: ?
-    enc_outputs, enc_state = tf.nn.dynamic_rnn(
-            cell=enc_cells,
-            inputs=enc_inputs,
-            sequence_length=seq_len,
-            dtype=tf.float32,
-            scope="encoder")
-
-
-    projection_layer = tf.layers.Dense(hparams.num_labels, use_bias=False)
-
-    tgt_seq_len = tf.add(seq_len, tf.constant(1, tf.int32))
-
-    # create decoder
-    dec_cells = create_rnn_cell(unit_type=hparams.unit_type,
-                                  num_units=hparams.num_units,
-                                  num_layers=hparams.num_layers,
-                                  num_residual_layers=hparams.num_residual_layers,
-                                  forget_bias=hparams.forget_bias,
-                                  dropout=hparams.dropout,
-                                  mode=tf.contrib.learn.ModeKeys.TRAIN)
-
-    # feed the ground truth at each time step
-    helper = tf.contrib.seq2seq.TrainingHelper(inputs=dec_inputs,
-                                               sequence_length=tgt_seq_len)
-
-    decoder = tf.contrib.seq2seq.BasicDecoder(cell=dec_cells,
-                                              helper=helper,
-                                              initial_state=enc_state,
-                                              output_layer=projection_layer)
-
-    final_outputs, final_states, final_sequence_len = tf.contrib.seq2seq.dynamic_decode(
-            decoder,
-            impute_finished=True,
-           # maximum_iterations=tf.reduce_max(seq_len),
-            scope="decoder")
-
-    logits = final_outputs.rnn_output
-
-    # mask out entries longer than seq_len
-    mask = tf.sequence_mask(tgt_seq_len, dtype=tf.float32)
-
-    crossent = tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits,
-                                                          labels=dec_outputs,
-                                                          name="crossent")
-
-    # NOTE: this part will likely go into the Eval graph
-    predictions = tf.argmax(input=logits, axis=-1)
-    targets = tf.argmax(input=dec_outputs, axis=-1)
-#    _, acc = tf.metrics.accuracy(labels=targets,
-#                                 predictions=predictions)
-    acc = tf.contrib.metrics.accuracy(predictions=predictions,
-                                      labels=targets)
-
-
-
-    train_loss = (tf.reduce_sum(crossent*mask)/hparams.batch_size)
-
-    global_step = tf.Variable(0, name="global_step", trainable=False)
-
-    # calculate and clip gradient
-    params = tf.trainable_variables()
-    gradients = tf.gradients(train_loss, params)
-    clipped_gradients, _ = tf.clip_by_global_norm(
-                gradients, hparams.max_gradient_norm)
-
-    # Optimization
-    optimizer = tf.train.AdamOptimizer(hparams.learning_rate)
-    update_step = optimizer.apply_gradients(
-                zip(clipped_gradients, params), global_step=global_step)
+    train_model = model.Model(hparams=hparams,
+                              iterator=train_iterator,
+                              mode=tf.contrib.learn.ModeKeys.TRAIN)
 
     initializer = tf.global_variables_initializer()
-    loc_initializer = tf.local_variables_initializer()
 
+with eval_graph.as_default():
+    eval_dataset = pssp_dataset(tf.constant(valid_files[0], tf.string),
+                                tf.constant(True, tf.bool),
+                                batch_size=hparams.batch_size,
+                                num_epochs=1)
+    eval_iterator = eval_dataset.make_initializable_iterator()
+
+    eval_model = model.Model(hparams=hparams,
+                             iterator=eval_iterator,
+                             mode=tf.contrib.learn.ModeKeys.EVAL)
+
+checkpoints_path = "/home/dillon/thesis/models/prot2vec/model1"
 
 train_sess = tf.Session(graph=train_graph)
+eval_sess = tf.Session(graph=eval_graph)
 
-train_sess.run([initializer, loc_initializer])
+train_sess.run([initializer])
 
-# print out the input sequence length, output sequence length:
-#preds, tgts = train_sess.run([predictions, targets])
-#print("predictions: ", preds)
-#print("targets: ", tgts)
-#print("cross entropy: (shape): ", cross_ent.shape)
-#print(cross_ent)
-#quit()
+# Train for num_epochs
+for i in range(hparams.num_epochs):
+    train_sess.run([train_iterator.initializer])
+    while True:
+        try:
+            _, train_loss, global_step = train_model.train(train_sess)
+            print("Step: %d, Training Loss: %f" % (global_step, train_loss))
 
-for i in range(100):
-    _, loss_val, accuracy = train_sess.run([update_step, train_loss, acc])
-    print("Step: %d, Loss %f, Acc: %f" % (i, loss_val, accuracy))
+            if global_step % 20 == 0:
+                # evaluate progress
+                checkpoint_path = train_model.saver.save(train_sess, checkpoints_path, global_step=global_step)
+                eval_model.saver.restore(eval_sess, checkpoint_path)
+                eval_sess.run(eval_iterator.initializer)
+                eval_step = 1
+                while True:
+                    try:
+                        eval_loss, eval_acc = eval_model.eval(eval_sess)
+                        print("Eval Step: %d, Eval Loss: %f, Eval Accuracy: %f" % (eval_step,
+                                                                                   eval_loss,
+                                                                                   eval_acc))
+                        eval_step += 1
+                    except tf.errors.OutOfRangeError:
+                        break
+
+        except tf.errors.OutOfRangeError:
+            print("- End of Epoch %d -" % (i))
+            break
+
+    # TODO: evaluate
