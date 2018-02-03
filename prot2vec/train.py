@@ -2,27 +2,13 @@
 import tensorflow as tf
 from datasets import pssp_dataset
 from model_helper import *
+from hparams.default import get_default_hparams
 
 train_files = ["/home/dillon/data/cpdb/cpdb_6133_filter_train_%d.tfrecords" % (i) for i in range(1, 11)]
 valid_files = ["/home/dillon/data/cpdb/cpdb_6133_filter_valid_%d.tfrecords" % (i) for i in range(1, 11)]
 test_files = ["/home/dillon/data/cpdb/cpdb_513.tf_records"]
 
-hparams = tf.contrib.training.HParams(
-    num_features=43,
-    num_labels=9,
-    batch_size=32,
-    num_epochs=1,
-    learning_rate=0.007,
-    unit_type="lstm",
-    num_units=128,
-    num_layers=1,
-    num_residual_layers=0,
-    forget_bias=1,
-    dropout=0.5,
-    max_gradient_norm=5.0
-)
-
-
+hparams = get_default_hparams()
 
 train_graph = tf.Graph()
 
