@@ -20,6 +20,7 @@ class Model(base_model.BaseModel):
         elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
             self.eval_loss = res[1]
             self.accuracy = res[2]
+            self.conf_matrix = res[3]
         elif self.mode == tf.contrib.learn.ModeKeys.INFER:
             # TODO: Implement Inference
             raise NotImplementedError("Inference not implemented yet!")
@@ -43,24 +44,26 @@ class Model(base_model.BaseModel):
                                      colocate_gradients_with_ops=hparams.colocate_gradients_with_ops)
 
             clipped_gradients, gradient_norm = tf.clip_by_global_norm(gradients, hparams.max_gradient_norm)
-            grad_summary = [tf.summary.scalar("grad_norm", gradient_norm),
-                            tf.summary.scalar("clipped_grad", tf.global_norm(clipped_gradients))]
 
 
             self.update = opt.apply_gradients(zip(clipped_gradients, params),
                                               global_step=self.global_step)
 
             # Summaries
-            self.train_summary = tf.summary.merge([
-                tf.summary.scalar("lr", self.learning_rate),
-                tf.summary.scalar("train_loss", self.train_loss),
-                ] + grad_summary)
+            with tf.variable_scope("train_summaries"):
+                grad_summary = [tf.summary.scalar("grad_norm", gradient_norm),]
+                self.train_summary = tf.summary.merge([
+    #                tf.summary.scalar("lr", self.learning_rate),
+                    tf.summary.scalar("train_loss", self.train_loss),
+                    ] + grad_summary)
 
         elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
             # Evaluation summaries
-            self.eval_summary = tf.summary.merge([
-                tf.summary.scalar("eval_loss", self.eval_loss),
-                tf.summary.scalar("accuracy", self.accuracy)])
+            with tf.variable_scope("eval_summaries"):
+                self.eval_summary = tf.summary.merge([
+                    tf.summary.scalar("eval_loss", self.eval_loss),
+                    tf.summary.scalar("accuracy", self.accuracy),])
+    #                tf.summary.image("conf_matrix", self.conf_matrix)])
 
 
             # TODO: Add inference summaries
@@ -138,14 +141,19 @@ class Model(base_model.BaseModel):
 
             loss = (tf.reduce_sum(crossent*mask)/hparams.batch_size)
 
+            #
             accuracy = None
+            conf_matrix = None
             if self.mode == tf.contrib.learn.ModeKeys.EVAL:
                 predictions = tf.argmax(input=logits, axis=-1)
                 targets = tf.argmax(input=dec_outputs, axis=-1)
                 accuracy = tf.contrib.metrics.accuracy(predictions=predictions,
                                                        labels=targets)
+#                conf_matrix = tf.confusion_matrix(labels=targets,
+#                                                  predictions=predictions,
+#                                                  name="conf_matrix")
 
-            return logits, loss, accuracy
+            return logits, loss, accuracy, conf_matrix
 
 
     def train(self, sess):
@@ -161,5 +169,5 @@ class Model(base_model.BaseModel):
         """Evaluate the model."""
         assert self.mode == tf.contrib.learn.ModeKeys.EVAL
         return sess.run([self.eval_loss,
-                         self.accuracy,])
-                         #self.eval_summary])
+                         self.accuracy,
+                         self.eval_summary])

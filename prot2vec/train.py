@@ -63,6 +63,7 @@ for i in range(hparams.num_epochs):
             print("Step: %d, Training Loss: %f" % (global_step, train_loss))
 
             if global_step % 20 == 0:
+                # TODO: Need to write eval summary not on eval minibatch, but entire eval
                 # evaluate progress
                 checkpoint_path = train_model.saver.save(train_sess,
                                                          ckptsdir,
@@ -72,14 +73,14 @@ for i in range(hparams.num_epochs):
                 eval_step = 1
                 while True:
                     try:
-                        eval_loss, eval_acc = eval_model.eval(eval_sess)
-                        # TODO: Need to write eval summary not on eval minibatch, but entire eval
+                        eval_loss, eval_acc, eval_summary = eval_model.eval(eval_sess)
                         # summary_writer.add_summary(summary, global_step)
                         print("Eval Step: %d, Eval Loss: %f, Eval Accuracy: %f" % (eval_step,
                                                                                    eval_loss,
                                                                                    eval_acc))
                         eval_step += 1
                     except tf.errors.OutOfRangeError:
+                        summary_writer.add_summary(eval_summary, global_step)
                         break
 
         except tf.errors.OutOfRangeError:
