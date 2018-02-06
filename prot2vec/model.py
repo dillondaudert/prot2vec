@@ -42,12 +42,26 @@ class Model(base_model.BaseModel):
                                      params,
                                      colocate_gradients_with_ops=hparams.colocate_gradients_with_ops)
 
-            clipped_gradients, _ = tf.clip_by_global_norm(gradients, hparams.max_gradient_norm)
+            clipped_gradients, gradient_norm = tf.clip_by_global_norm(gradients, hparams.max_gradient_norm)
+            grad_summary = [tf.summary.scalar("grad_norm", gradient_norm),
+                            tf.summary.scalar("clipped_grad", tf.global_norm(clipped_gradients))]
+
 
             self.update = opt.apply_gradients(zip(clipped_gradients, params),
                                               global_step=self.global_step)
 
-            # TODO: Add training summaries for learning rate, loss, gradient norm
+            # Summaries
+            self.train_summary = tf.summary.merge([
+                tf.summary.scalar("lr", self.learning_rate),
+                tf.summary.scalar("train_loss", self.train_loss),
+                ] + grad_summary)
+
+        elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
+            # Evaluation summaries
+            self.eval_summary = tf.summary.merge([
+                tf.summary.scalar("eval_loss", self.eval_loss),
+                tf.summary.scalar("accuracy", self.accuracy)])
+
 
             # TODO: Add inference summaries
 
@@ -139,10 +153,13 @@ class Model(base_model.BaseModel):
         assert self.mode == tf.contrib.learn.ModeKeys.TRAIN
         return sess.run([self.update,
                          self.train_loss,
-                         self.global_step])
+                         self.global_step,
+                         self.train_summary])
 
 
     def eval(self, sess):
         """Evaluate the model."""
         assert self.mode == tf.contrib.learn.ModeKeys.EVAL
-        return sess.run([self.eval_loss, self.accuracy])
+        return sess.run([self.eval_loss,
+                         self.accuracy,])
+                         #self.eval_summary])

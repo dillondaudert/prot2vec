@@ -1,9 +1,14 @@
+#!/usr/bin/env python3
 # basic example of training a network end-to-end
 import tensorflow as tf
 from datasets import pssp_dataset
 from model_helper import *
 import model
 from hparams.default import get_default_hparams
+
+modeldir = "/home/dillon/thesis/models/prot2vec/test"
+ckptsdir = modeldir+"/ckpts"
+logdir = modeldir+"/log"
 
 train_files = ["/home/dillon/data/cpdb/cpdb_6133_filter_train_%d.tfrecords" % (i) for i in range(1, 11)]
 valid_files = ["/home/dillon/data/cpdb/cpdb_6133_filter_valid_%d.tfrecords" % (i) for i in range(1, 11)]
@@ -39,7 +44,8 @@ with eval_graph.as_default():
                              iterator=eval_iterator,
                              mode=tf.contrib.learn.ModeKeys.EVAL)
 
-checkpoints_path = "/home/dillon/thesis/models/prot2vec/model1"
+# Summary writer
+summary_writer = tf.summary.FileWriter(logdir, train_graph)
 
 train_sess = tf.Session(graph=train_graph)
 eval_sess = tf.Session(graph=eval_graph)
@@ -51,18 +57,24 @@ for i in range(hparams.num_epochs):
     train_sess.run([train_iterator.initializer])
     while True:
         try:
-            _, train_loss, global_step = train_model.train(train_sess)
+            _, train_loss, global_step, summary = train_model.train(train_sess)
+            # write train summaries
+            summary_writer.add_summary(summary, global_step)
             print("Step: %d, Training Loss: %f" % (global_step, train_loss))
 
             if global_step % 20 == 0:
                 # evaluate progress
-                checkpoint_path = train_model.saver.save(train_sess, checkpoints_path, global_step=global_step)
+                checkpoint_path = train_model.saver.save(train_sess,
+                                                         ckptsdir,
+                                                         global_step=global_step)
                 eval_model.saver.restore(eval_sess, checkpoint_path)
                 eval_sess.run(eval_iterator.initializer)
                 eval_step = 1
                 while True:
                     try:
                         eval_loss, eval_acc = eval_model.eval(eval_sess)
+                        # TODO: Need to write eval summary not on eval minibatch, but entire eval
+                        # summary_writer.add_summary(summary, global_step)
                         print("Eval Step: %d, Eval Loss: %f, Eval Accuracy: %f" % (eval_step,
                                                                                    eval_loss,
                                                                                    eval_acc))
