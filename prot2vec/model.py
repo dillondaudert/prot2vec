@@ -2,6 +2,7 @@
 import tensorflow as tf
 import base_model
 from model_helper import *
+from metrics import streaming_confusion_matrix, cm_summary
 
 
 class Model(base_model.BaseModel):
@@ -19,8 +20,10 @@ class Model(base_model.BaseModel):
 
         elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
             self.eval_loss = res[1]
-            self.accuracy = res[2]
-            self.conf_matrix = res[3]
+            self.accuracy = res[2][0]
+            self.confusion = res[2][1]
+            self.update_metrics = res[3]
+
         elif self.mode == tf.contrib.learn.ModeKeys.INFER:
             # TODO: Implement Inference
             raise NotImplementedError("Inference not implemented yet!")
@@ -50,21 +53,18 @@ class Model(base_model.BaseModel):
                                               global_step=self.global_step)
 
             # Summaries
-            with tf.variable_scope("train_summaries"):
-                grad_summary = [tf.summary.scalar("grad_norm", gradient_norm),]
-                self.train_summary = tf.summary.merge([
-    #                tf.summary.scalar("lr", self.learning_rate),
-                    tf.summary.scalar("train_loss", self.train_loss),
-                    ] + grad_summary)
+            grad_summary = [tf.summary.scalar("grad_norm", gradient_norm),]
+            self.train_summary = tf.summary.merge([
+#                tf.summary.scalar("lr", self.learning_rate),
+                tf.summary.scalar("train_loss", self.train_loss),
+                ] + grad_summary)
 
         elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
             # Evaluation summaries
-            with tf.variable_scope("eval_summaries"):
-                self.eval_summary = tf.summary.merge([
-                    tf.summary.scalar("eval_loss", self.eval_loss),
-                    tf.summary.scalar("accuracy", self.accuracy),])
-    #                tf.summary.image("conf_matrix", self.conf_matrix)])
-
+            self.eval_summary = tf.summary.merge([
+                tf.summary.scalar("eval_loss", self.eval_loss),
+                tf.summary.scalar("accuracy", self.accuracy),
+                cm_summary(self.confusion, hparams.num_labels)])
 
             # TODO: Add inference summaries
 
@@ -77,7 +77,7 @@ class Model(base_model.BaseModel):
             hparams: The hyperparameters for configuration
             scope: The variable scope name for this subgraph, default "dynamic_seq2seq"
         Returns:
-            A tuple with (logits, loss, accuracy)
+            A tuple with (logits, loss, metrics, update_ops)
         """
 
         enc_inputs, dec_inputs, dec_outputs, seq_len = self.iterator.get_next()
@@ -142,18 +142,23 @@ class Model(base_model.BaseModel):
             loss = (tf.reduce_sum(crossent*mask)/hparams.batch_size)
 
             #
-            accuracy = None
-            conf_matrix = None
+            metrics = []
+            update_ops = []
             if self.mode == tf.contrib.learn.ModeKeys.EVAL:
                 predictions = tf.argmax(input=logits, axis=-1)
                 targets = tf.argmax(input=dec_outputs, axis=-1)
-                accuracy = tf.contrib.metrics.accuracy(predictions=predictions,
-                                                       labels=targets)
-#                conf_matrix = tf.confusion_matrix(labels=targets,
-#                                                  predictions=predictions,
-#                                                  name="conf_matrix")
+                acc, acc_update = tf.metrics.accuracy(predictions=predictions,
+                                                      labels=targets)
+                # flatten for confusion matrix
+                targets_flat = tf.reshape(targets, [-1])
+                predictions_flat = tf.reshape(predictions, [-1])
+                cm, cm_update = streaming_confusion_matrix(labels=targets_flat,
+                                                           predictions=predictions_flat,
+                                                           num_classes=hparams.num_labels)
+                metrics = [acc, cm]
+                update_ops = [acc_update, cm_update]
 
-            return logits, loss, accuracy, conf_matrix
+            return logits, loss, metrics, update_ops
 
 
     def train(self, sess):
@@ -170,4 +175,5 @@ class Model(base_model.BaseModel):
         assert self.mode == tf.contrib.learn.ModeKeys.EVAL
         return sess.run([self.eval_loss,
                          self.accuracy,
-                         self.eval_summary])
+                         self.eval_summary,
+                         self.update_metrics])

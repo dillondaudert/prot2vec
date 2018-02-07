@@ -6,7 +6,7 @@ from model_helper import *
 import model
 from hparams.default import get_default_hparams
 
-modeldir = "/home/dillon/thesis/models/prot2vec/test"
+modeldir = "/home/dillon/thesis/models/prot2vec/basic_3"
 ckptsdir = modeldir+"/ckpts"
 logdir = modeldir+"/log"
 
@@ -21,7 +21,7 @@ eval_graph = tf.Graph()
 
 # build training graph
 with train_graph.as_default():
-    train_dataset = pssp_dataset(tf.constant(train_files[0], tf.string),
+    train_dataset = pssp_dataset(tf.constant(train_files[2], tf.string),
                                  tf.constant(True, tf.bool),
                                  batch_size=hparams.batch_size,
                                  num_epochs=hparams.num_epochs)
@@ -34,7 +34,7 @@ with train_graph.as_default():
     initializer = tf.global_variables_initializer()
 
 with eval_graph.as_default():
-    eval_dataset = pssp_dataset(tf.constant(valid_files[0], tf.string),
+    eval_dataset = pssp_dataset(tf.constant(valid_files[2], tf.string),
                                 tf.constant(True, tf.bool),
                                 batch_size=hparams.batch_size,
                                 num_epochs=1)
@@ -43,9 +43,12 @@ with eval_graph.as_default():
     eval_model = model.Model(hparams=hparams,
                              iterator=eval_iterator,
                              mode=tf.contrib.learn.ModeKeys.EVAL)
+    local_initializer = tf.local_variables_initializer()
 
-# Summary writer
-summary_writer = tf.summary.FileWriter(logdir, train_graph)
+# Summary writers
+train_writer = tf.summary.FileWriter(logdir+"/train", train_graph)
+eval_writer = tf.summary.FileWriter(logdir+"/eval")
+
 
 train_sess = tf.Session(graph=train_graph)
 eval_sess = tf.Session(graph=eval_graph)
@@ -59,7 +62,7 @@ for i in range(hparams.num_epochs):
         try:
             _, train_loss, global_step, summary = train_model.train(train_sess)
             # write train summaries
-            summary_writer.add_summary(summary, global_step)
+            train_writer.add_summary(summary, global_step)
             print("Step: %d, Training Loss: %f" % (global_step, train_loss))
 
             if global_step % 20 == 0:
@@ -69,22 +72,18 @@ for i in range(hparams.num_epochs):
                                                          ckptsdir,
                                                          global_step=global_step)
                 eval_model.saver.restore(eval_sess, checkpoint_path)
-                eval_sess.run(eval_iterator.initializer)
-                eval_step = 1
+                eval_sess.run([eval_iterator.initializer, local_initializer])
                 while True:
                     try:
-                        eval_loss, eval_acc, eval_summary = eval_model.eval(eval_sess)
+                        eval_loss, eval_acc, eval_summary, _ = eval_model.eval(eval_sess)
                         # summary_writer.add_summary(summary, global_step)
-                        print("Eval Step: %d, Eval Loss: %f, Eval Accuracy: %f" % (eval_step,
-                                                                                   eval_loss,
-                                                                                   eval_acc))
-                        eval_step += 1
                     except tf.errors.OutOfRangeError:
-                        summary_writer.add_summary(eval_summary, global_step)
+                        print("Step: %d, Eval Loss: %f, Eval Accuracy: %f" % (global_step,
+                                                                              eval_loss,
+                                                                              eval_acc))
+                        eval_writer.add_summary(eval_summary, global_step)
                         break
 
         except tf.errors.OutOfRangeError:
             print("- End of Epoch %d -" % (i))
             break
-
-    # TODO: evaluate
