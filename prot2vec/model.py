@@ -12,6 +12,10 @@ class Model(base_model.BaseModel):
         self.iterator = iterator
         self.mode = mode
 
+        # set initializer
+        initializer = tf.glorot_normal_initializer()
+        tf.get_variable_scope().set_initializer(initializer)
+
         res = self._build_graph(hparams, scope=scope)
 
         # Graph losses
