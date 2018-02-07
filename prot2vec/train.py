@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # basic example of training a network end-to-end
 import tensorflow as tf
-from datasets import pssp_dataset
+from dataset import pssp_dataset
 from model_helper import *
 import model
 from hparams.default import get_default_hparams
 
-modeldir = "/home/dillon/thesis/models/prot2vec/basic_3"
+modeldir = "/home/dillon/thesis/models/prot2vec/model"
 ckptsdir = modeldir+"/ckpts"
-logdir = modeldir+"/log"
+logdir = modeldir
 
 train_files = ["/home/dillon/data/cpdb/cpdb_6133_filter_train_%d.tfrecords" % (i) for i in range(1, 11)]
 valid_files = ["/home/dillon/data/cpdb/cpdb_6133_filter_valid_%d.tfrecords" % (i) for i in range(1, 11)]
@@ -21,7 +21,7 @@ eval_graph = tf.Graph()
 
 # build training graph
 with train_graph.as_default():
-    train_dataset = pssp_dataset(tf.constant(train_files[2], tf.string),
+    train_dataset = pssp_dataset(tf.constant(train_files[1], tf.string),
                                  tf.constant(True, tf.bool),
                                  batch_size=hparams.batch_size,
                                  num_epochs=hparams.num_epochs)
@@ -34,7 +34,7 @@ with train_graph.as_default():
     initializer = tf.global_variables_initializer()
 
 with eval_graph.as_default():
-    eval_dataset = pssp_dataset(tf.constant(valid_files[2], tf.string),
+    eval_dataset = pssp_dataset(tf.constant(valid_files[1], tf.string),
                                 tf.constant(True, tf.bool),
                                 batch_size=hparams.batch_size,
                                 num_epochs=1)
@@ -66,8 +66,6 @@ for i in range(hparams.num_epochs):
             print("Step: %d, Training Loss: %f" % (global_step, train_loss))
 
             if global_step % 20 == 0:
-                # TODO: Need to write eval summary not on eval minibatch, but entire eval
-                # evaluate progress
                 checkpoint_path = train_model.saver.save(train_sess,
                                                          ckptsdir,
                                                          global_step=global_step)
