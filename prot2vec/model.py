@@ -140,7 +140,7 @@ class Model(base_model.BaseModel):
                          ScheduledEmbeddingTrainingHelper(inputs=dec_inputs,
                                                           sequence_length=tgt_seq_len,
                                                           embedding=embedding,
-                                                          sampling_probability=tf.constant(0.0))
+                                                          sampling_probability=tf.constant(1.0))
 
             decoder = tf.contrib.seq2seq.BasicDecoder(cell=dec_cells,
                                                       helper=helper,
