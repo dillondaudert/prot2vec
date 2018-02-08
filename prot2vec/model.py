@@ -7,10 +7,11 @@ from metrics import streaming_confusion_matrix, cm_summary
 
 class Model(base_model.BaseModel):
 
-    def __init__(self, hparams, iterator, mode, scope=None):
+    def __init__(self, hparams, iterator, mode, target_lookup_table, scope=None):
         self.hparams = hparams
         self.iterator = iterator
         self.mode = mode
+        self.target_lookup_table = target_lookup_table
 
         # set initializer
         initializer = tf.glorot_normal_initializer()
@@ -119,17 +120,27 @@ class Model(base_model.BaseModel):
             # output project layer
             projection_layer = tf.layers.Dense(hparams.num_labels, use_bias=False)
 
-            if hparams.train_helper == "teacher":
-                # teacher forcing
-                helper = tf.contrib.seq2seq.TrainingHelper(inputs=dec_inputs,
-                                                           sequence_length=tgt_seq_len)
-            elif hparams.train_helper == "sched":
-                # scheduled sampling
-                # TODO: Regularize so the outputs are probability distributions
-                helper = tf.contrib.seq2seq.ScheduledOutputTrainingHelper(inputs=dec_inputs,
-                                                                          sequence_length=tgt_seq_len,
-                                                                          sampling_probability=tf.constant(hparams.sched_rate))
-
+            if self.mode == tf.contrib.learn.ModeKeys.TRAIN:
+                if hparams.train_helper == "teacher":
+                    # teacher forcing
+                    helper = tf.contrib.seq2seq.TrainingHelper(inputs=dec_inputs,
+                                                               sequence_length=tgt_seq_len)
+                elif hparams.train_helper == "sched":
+                    embedding = tf.eye(hparams.num_labels)
+                    # scheduled sampling
+                    helper = tf.contrib.seq2seq.\
+                             ScheduledEmbeddingTrainingHelper(inputs=dec_inputs,
+                                                              sequence_length=tgt_seq_len,
+                                                              embedding=embedding,
+                                                              sampling_probability=tf.constant(hparams.sched_rate),
+                                                              )
+            elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
+                embedding = tf.eye(hparams.num_labels)
+                helper = tf.contrib.seq2seq.\
+                         ScheduledEmbeddingTrainingHelper(inputs=dec_inputs,
+                                                          sequence_length=tgt_seq_len,
+                                                          embedding=embedding,
+                                                          sampling_probability=tf.constant(0.0))
 
             decoder = tf.contrib.seq2seq.BasicDecoder(cell=dec_cells,
                                                       helper=helper,
@@ -162,6 +173,7 @@ class Model(base_model.BaseModel):
                 acc, acc_update = tf.metrics.accuracy(predictions=predictions,
                                                       labels=targets)
                 # flatten for confusion matrix
+                # TODO: remove the zero padding so that zeros aren't counted
                 targets_flat = tf.reshape(targets, [-1])
                 predictions_flat = tf.reshape(predictions, [-1])
                 cm, cm_update = streaming_confusion_matrix(labels=targets_flat,
