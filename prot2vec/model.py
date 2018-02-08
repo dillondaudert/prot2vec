@@ -119,13 +119,16 @@ class Model(base_model.BaseModel):
             # output project layer
             projection_layer = tf.layers.Dense(hparams.num_labels, use_bias=False)
 
-            # teacher forcing
-#            helper = tf.contrib.seq2seq.TrainingHelper(inputs=dec_inputs,
-#                                                       sequence_length=tgt_seq_len)
-            # scheduled sampling
-            helper = tf.contrib.seq2seq.ScheduledOutputTrainingHelper(inputs=dec_inputs,
-                                                                      sequence_length=tgt_seq_len,
-                                                                      sampling_probability=tf.constant(0.50))
+            if hparams.train_helper == "teacher":
+                # teacher forcing
+                helper = tf.contrib.seq2seq.TrainingHelper(inputs=dec_inputs,
+                                                           sequence_length=tgt_seq_len)
+            elif hparams.train_helper == "sched":
+                # scheduled sampling
+                # TODO: Regularize so the outputs are probability distributions
+                helper = tf.contrib.seq2seq.ScheduledOutputTrainingHelper(inputs=dec_inputs,
+                                                                          sequence_length=tgt_seq_len,
+                                                                          sampling_probability=tf.constant(hparams.sched_rate))
 
 
             decoder = tf.contrib.seq2seq.BasicDecoder(cell=dec_cells,

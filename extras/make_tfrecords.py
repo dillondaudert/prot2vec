@@ -116,8 +116,8 @@ def cpdb_filt_to_tfrecord():
     # Flatten labels
     labels = labels.reshape(num_samples, -1)
 
-    # Calculate the indices of the 10 folds:
-    kf = KFold(n_splits=10)
+    # Calculate the indices of the 5 folds:
+    kf = KFold(n_splits=5)
     fold = 0
     for train_inds, valid_inds in kf.split(np.arange(num_samples)):
         fold += 1
