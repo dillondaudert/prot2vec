@@ -5,15 +5,17 @@ from dataset import pssp_dataset
 from model_helper import *
 import model
 from hparams.default import get_default_hparams
+from utils.vocab_utils import create_table
 
 hparams = get_default_hparams()
 
-basedir = hparams.dir+"/lr(%.3f)_u(%d)_d(%s)_nl(%d)_nr(%d)_h(%s)_dr(%.2f)" % (hparams.learning_rate,
+basedir = hparams.dir+"/lr%.3f_u%d_d%s_nl%d_nr%d_h%s_sr%.2f_dr%.2f" % (hparams.learning_rate,
                                                                             hparams.num_units,
                                                                             hparams.dense_input,
                                                                             hparams.num_layers,
                                                                             hparams.num_residual_layers,
                                                                             hparams.train_helper,
+                                                                            hparams.sched_rate,
                                                                             hparams.dropout)
 
 train_files = ["/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_train_%d.tfrecords" % (i) for i in range(1, 6)]
@@ -38,12 +40,15 @@ def train_cv(fold):
                                      batch_size=hparams.batch_size,
                                      num_epochs=hparams.num_epochs)
         train_iterator = train_dataset.make_initializable_iterator()
+        ss_table = create_table("ss")
 
         train_model = model.Model(hparams=hparams,
                                   iterator=train_iterator,
-                                  mode=tf.contrib.learn.ModeKeys.TRAIN)
+                                  mode=tf.contrib.learn.ModeKeys.TRAIN,
+                                  target_lookup_table=ss_table)
 
         initializer = tf.global_variables_initializer()
+        tables_initializer = tf.tables_initializer()
 
     with eval_graph.as_default():
         eval_dataset = pssp_dataset(tf.constant(valid_files[fold-1], tf.string),
@@ -51,10 +56,12 @@ def train_cv(fold):
                                     batch_size=hparams.batch_size,
                                     num_epochs=1)
         eval_iterator = eval_dataset.make_initializable_iterator()
+        ss_table = create_table("ss")
 
         eval_model = model.Model(hparams=hparams,
                                  iterator=eval_iterator,
-                                 mode=tf.contrib.learn.ModeKeys.EVAL)
+                                 mode=tf.contrib.learn.ModeKeys.EVAL,
+                                 target_lookup_table=ss_table)
         local_initializer = tf.local_variables_initializer()
 
     # Summary writers
@@ -65,7 +72,7 @@ def train_cv(fold):
     train_sess = tf.Session(graph=train_graph)
     eval_sess = tf.Session(graph=eval_graph)
 
-    train_sess.run([initializer])
+    train_sess.run([initializer, tables_initializer])
 
     # Train for num_epochs
     for i in range(hparams.num_epochs):
@@ -104,6 +111,7 @@ def train_cv(fold):
     # End of training
     eval_writer.close()
     train_writer.close()
+
 
 for i in range(1, 6):
     print("TRAINING FOLD %d" % i)
