@@ -16,7 +16,13 @@ class Model(base_model.BaseModel):
         self.sample_probability = self._get_sample_probability(hparams)
 
         # set initializer
-        initializer = tf.glorot_normal_initializer()
+        if hparams.initializer == "glorot_normal":
+            initializer = tf.glorot_normal_initializer()
+        elif hparams.initializer == "glorot_uniform":
+            initializer = tf.glorot_uniform_initializer()
+        elif hparams.initializer == "orthogonal":
+            initializer = tf.orthogonal_initializer()
+
         tf.get_variable_scope().set_initializer(initializer)
 
         res = self._build_graph(hparams, scope=scope)
@@ -40,10 +46,18 @@ class Model(base_model.BaseModel):
         # training update ops
         if self.mode == tf.contrib.learn.ModeKeys.TRAIN:
             self.learning_rate = hparams.learning_rate
+            self.momentum = hparams.momentum
 
             # optimizer
             if hparams.optimizer == "adam":
                 opt = tf.train.AdamOptimizer(self.learning_rate)
+            elif hparams.optimizer == "sgd":
+                if self.momentum == 0.:
+                    opt = tf.train.GradientDescentOptimizer(self.learning_rate)
+                else:
+                    opt = tf.train.MomentumOptimizer(self.learning_rate,
+                                                     self.momentum,
+                                                     use_nesterov=True)
             else:
                 raise ValueError("Optimizer %s not recognized!" % (hparams.optimizer))
 
