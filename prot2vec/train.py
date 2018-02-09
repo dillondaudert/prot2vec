@@ -4,12 +4,12 @@ import tensorflow as tf
 from dataset import pssp_dataset
 from model_helper import *
 import model
-from hparams.default import get_default_hparams
+from utils.hparams import get_hparams
 from utils.vocab_utils import create_table
 
-hparams = get_default_hparams()
+hparams = get_hparams("default")
 
-basedir = hparams.dir+"/LR%.3f_MG%1.1f_U%d_D%s_NL%d_NR%d_H%s_SD%s_DR%.2f_DP%d" % (hparams.learning_rate,
+basedir = hparams.logdir+"/LR%.3f_MG%1.1f_U%d_D%s_NL%d_NR%d_H%s_SD%s_DR%.2f_DP%d" % (hparams.learning_rate,
                                                                     hparams.max_gradient_norm,
                                                                     hparams.num_units,
                                                                     hparams.dense_input,
