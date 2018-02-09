@@ -5,7 +5,7 @@ import tensorflow as tf
 __all__ = ["get_default_hparams",]
 
 VALID_HPARAMS = {
-        "optimizer": ["adam", "sgd", "momentum"],
+        "optimizer": ["adam", "sgd"],
         "unit_type": ["lstm", "nlstm"],
         "train_helper": ["teacher", "sched"],
         "sched_decay": ["linear", "expon", "inv_sig"],
@@ -26,24 +26,24 @@ def get_hparams(setting):
             logdir="/home/dillon/thesis/models/prot2vec/default",
             num_features=43,
             num_labels=9,
-            batch_size=32,
-            num_epochs=4,
-            optimizer="adam",
-            learning_rate=0.005,
             unit_type="lstm",
+            initializer="glorot_uniform",
+            dense_input=False,
             num_units=128,
             num_layers=1,
-            depth=0,
             num_residual_layers=0,
             forget_bias=1,
             dropout=0.0,
+            batch_size=32,
+            num_epochs=4,
+            optimizer="sgd",
+            learning_rate=0.005,
+            momentum=0.,
             max_gradient_norm=5.0,
             colocate_gradients_with_ops=False,
-            num_keep_ckpts=2,
-            dense_input=False,
             train_helper="sched",
             sched_decay="inv_sig",
-            initializer="glorot_uniform"
+            num_keep_ckpts=2,
         )
 
     return hparams
