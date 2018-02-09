@@ -12,6 +12,8 @@ class Model(base_model.BaseModel):
         self.iterator = iterator
         self.mode = mode
         self.target_lookup_table = target_lookup_table
+        self.global_step = tf.Variable(0, name="global_step", trainable=False)
+        self.sample_probability = self._get_sample_probability(hparams)
 
         # set initializer
         initializer = tf.glorot_normal_initializer()
@@ -33,7 +35,6 @@ class Model(base_model.BaseModel):
             # TODO: Implement Inference
             raise NotImplementedError("Inference not implemented yet!")
 
-        self.global_step = tf.Variable(0, name="global_step", trainable=False)
         params = tf.trainable_variables()
 
         # training update ops
@@ -62,6 +63,7 @@ class Model(base_model.BaseModel):
             self.train_summary = tf.summary.merge([
 #                tf.summary.scalar("lr", self.learning_rate),
                 tf.summary.scalar("train_loss", self.train_loss),
+                tf.summary.scalar("sample_probability", self.sample_probability),
                 ] + grad_summary)
 
         elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
@@ -89,9 +91,15 @@ class Model(base_model.BaseModel):
 
         with tf.variable_scope(scope or "dynamic_seq2seq", dtype=tf.float32):
             # create encoder
+            dense_input_layer = tf.layers.Dense(hparams.num_units)
+
+            if hparams.dense_input:
+                enc_inputs = dense_input_layer(enc_inputs)
+
             enc_cells = create_rnn_cell(unit_type=hparams.unit_type,
                                         num_units=hparams.num_units,
                                         num_layers=hparams.num_layers,
+                                        depth=hparams.depth,
                                         num_residual_layers=hparams.num_residual_layers,
                                         forget_bias=hparams.forget_bias,
                                         dropout=hparams.dropout,
@@ -112,6 +120,7 @@ class Model(base_model.BaseModel):
             dec_cells = create_rnn_cell(unit_type=hparams.unit_type,
                                         num_units=hparams.num_units,
                                         num_layers=hparams.num_layers,
+                                        depth=hparams.depth,
                                         num_residual_layers=hparams.num_residual_layers,
                                         forget_bias=hparams.forget_bias,
                                         dropout=hparams.dropout,
@@ -132,7 +141,7 @@ class Model(base_model.BaseModel):
                              ScheduledEmbeddingTrainingHelper(inputs=dec_inputs,
                                                               sequence_length=tgt_seq_len,
                                                               embedding=embedding,
-                                                              sampling_probability=tf.constant(hparams.sched_rate),
+                                                              sampling_probability=self.sample_probability,
                                                               )
             elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
                 embedding = tf.eye(hparams.num_labels)
@@ -162,27 +171,51 @@ class Model(base_model.BaseModel):
                                                                   labels=dec_outputs,
                                                                   name="crossent")
 
-            loss = (tf.reduce_sum(crossent*mask)/hparams.batch_size)
+            loss = (tf.reduce_sum(crossent*mask)/(hparams.batch_size*tf.reduce_mean(tf.cast(tgt_seq_len,
+                                                                                            tf.float32))))
 
-            #
             metrics = []
             update_ops = []
             if self.mode == tf.contrib.learn.ModeKeys.EVAL:
                 predictions = tf.argmax(input=logits, axis=-1)
                 targets = tf.argmax(input=dec_outputs, axis=-1)
                 acc, acc_update = tf.metrics.accuracy(predictions=predictions,
-                                                      labels=targets)
+                                                      labels=targets,
+                                                      weights=mask)
                 # flatten for confusion matrix
                 # TODO: remove the zero padding so that zeros aren't counted
                 targets_flat = tf.reshape(targets, [-1])
                 predictions_flat = tf.reshape(predictions, [-1])
+                mask_flat = tf.reshape(mask, [-1])
                 cm, cm_update = streaming_confusion_matrix(labels=targets_flat,
                                                            predictions=predictions_flat,
-                                                           num_classes=hparams.num_labels)
+                                                           num_classes=hparams.num_labels,
+                                                           weights=mask_flat)
                 metrics = [acc, cm]
                 update_ops = [acc_update, cm_update]
 
             return logits, loss, metrics, update_ops
+
+    def _get_sample_probability(self, hparams):
+        """Get the probability for sampling from the outputs instead of
+        ground truth."""
+
+        eps = tf.constant(0.99)
+        if hparams.sched_decay == "expon":
+            # exponential decay
+            eps = tf.pow(eps, tf.cast(self.global_step, tf.float32))
+        elif hparams.sched_decay == "linear":
+            min_eps = tf.constant(0.035)
+            eps = tf.maximum(min_eps, (eps - tf.divide(tf.cast(self.global_step, tf.float32),
+                                                       tf.constant(260, dtype=tf.float32))))
+        elif hparams.sched_decay == "inv_sig":
+            k = tf.constant(60.)
+            start_offset = tf.constant(1.4)
+            eps = (k / (k + tf.exp(tf.cast(self.global_step, tf.float32)/k)))/start_offset
+        sample_probability = tf.constant(1.) - eps
+
+        return sample_probability
+
 
 
     def train(self, sess):
@@ -191,6 +224,7 @@ class Model(base_model.BaseModel):
         return sess.run([self.update,
                          self.train_loss,
                          self.global_step,
+                         self.sample_probability,
                          self.train_summary])
 
 
