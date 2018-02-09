@@ -1,11 +1,12 @@
 """Utility functions for building models."""
 import tensorflow as tf
+from rnn_cell import NLSTMCell
 
 __all__ = [
     "create_rnn_cell",
 ]
 
-def _single_cell(unit_type, num_units, forget_bias, dropout, mode,
+def _single_cell(unit_type, num_units, depth, forget_bias, dropout, mode,
                  residual_connection=False, residual_fn=None):
     """Define a single recurrent cell."""
 
@@ -16,6 +17,9 @@ def _single_cell(unit_type, num_units, forget_bias, dropout, mode,
         single_cell = tf.nn.rnn_cell.BasicLSTMCell(
             num_units,
             forget_bias=forget_bias)
+    elif unit_type == "nlstm":
+        single_cell = NLSTMCell(num_units=num_units,
+                                depth=depth)
     else:
         raise ValueError("Unknown unit type %s!" % unit_type)
 
@@ -29,7 +33,7 @@ def _single_cell(unit_type, num_units, forget_bias, dropout, mode,
 
     return single_cell
 
-def _cell_list(unit_type, num_units, num_layers, num_residual_layers,
+def _cell_list(unit_type, num_units, num_layers, num_residual_layers, depth,
                forget_bias, dropout, mode, residual_fn=None):
     """Create a list of RNN cells."""
 
@@ -38,6 +42,7 @@ def _cell_list(unit_type, num_units, num_layers, num_residual_layers,
         single_cell = _single_cell(
             unit_type=unit_type,
             num_units=num_units,
+            depth=depth,
             forget_bias=forget_bias,
             dropout=dropout,
             mode=mode,
@@ -47,7 +52,7 @@ def _cell_list(unit_type, num_units, num_layers, num_residual_layers,
         cell_list.append(single_cell)
     return cell_list
 
-def create_rnn_cell(unit_type, num_units, num_layers, num_residual_layers,
+def create_rnn_cell(unit_type, num_units, num_layers, num_residual_layers, depth,
                     forget_bias, dropout, mode):
     """Create single- or multi-layer RNN cell.
 
@@ -58,6 +63,7 @@ def create_rnn_cell(unit_type, num_units, num_layers, num_residual_layers,
         num_residual_layers: the number of residual layers. if
           num_residual_layers < num_layers, then the last num_residual_layers
           will have residual connections (ResidualWrapper)
+        depth: only used for NLSTM; the depth of the nesting
         forget_bias: the initial forget bias of the RNNCell(s)
         dropout: floating point between 0.0 and 1.0, the probability of dropout
         mode: either tf.contrib.learn.TRAIN/EVAL/INFER
@@ -70,6 +76,7 @@ def create_rnn_cell(unit_type, num_units, num_layers, num_residual_layers,
                            num_units=num_units,
                            num_layers=num_layers,
                            num_residual_layers=num_residual_layers,
+                           depth=depth,
                            forget_bias=forget_bias,
                            dropout=dropout,
                            mode=mode)
