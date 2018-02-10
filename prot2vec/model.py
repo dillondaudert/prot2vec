@@ -73,19 +73,17 @@ class Model(base_model.BaseModel):
                                               global_step=self.global_step)
 
             # Summaries
-            grad_summary = [tf.summary.scalar("grad_norm", gradient_norm),]
-            self.train_summary = tf.summary.merge([
-#                tf.summary.scalar("lr", self.learning_rate),
-                tf.summary.scalar("train_loss", self.train_loss),
-                tf.summary.scalar("sample_probability", self.sample_probability),
-                ] + grad_summary)
+            tf.summary.scalar("grad_norm", gradient_norm, collections=["train"])
+            tf.summary.scalar("train_loss", self.train_loss, collections=["train"])
+            tf.summary.scalar("sample_probability", self.sample_probability, collections=["train"])
+            self.train_summary = tf.summary.merge_all("train")
 
         elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
             # Evaluation summaries
-            self.eval_summary = tf.summary.merge([
-                tf.summary.scalar("eval_loss", self.eval_loss),
-                tf.summary.scalar("accuracy", self.accuracy),
-                cm_summary(self.confusion, hparams.num_labels)])
+            tf.summary.scalar("eval_loss", self.eval_loss, collections=["eval"])
+            tf.summary.scalar("accuracy", self.accuracy, collections=["eval"])
+            tf.add_to_collection("eval", cm_summary(self.confusion, hparams.num_labels))
+            self.eval_summary = tf.summary.merge_all("eval")
 
             # TODO: Add inference summaries
 
@@ -129,7 +127,6 @@ class Model(base_model.BaseModel):
             tgt_seq_len = tf.add(seq_len, tf.constant(1, tf.int32))
 
             # TODO: Add Inference decoder
-
             # create decoder
             dec_cells = create_rnn_cell(unit_type=hparams.unit_type,
                                         num_units=hparams.num_units,
