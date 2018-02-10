@@ -14,11 +14,12 @@ def _single_cell(unit_type, num_units, depth, forget_bias, dropout, mode,
     dropout = dropout if mode == tf.contrib.learn.ModeKeys.TRAIN else 0.0
 
     if unit_type == "lstm":
-        single_cell = tf.nn.rnn_cell.BasicLSTMCell(
-            num_units,
-            forget_bias=forget_bias)
+        single_cell = tf.nn.rnn_cell.LSTMCell(name="lstm",
+                                              num_units=num_units,
+                                              forget_bias=forget_bias)
     elif unit_type == "nlstm":
-        single_cell = NLSTMCell(num_units=num_units,
+        single_cell = NLSTMCell(name="nlstm",
+                                num_units=num_units,
                                 depth=depth)
     else:
         raise ValueError("Unknown unit type %s!" % unit_type)
@@ -31,6 +32,10 @@ def _single_cell(unit_type, num_units, depth, forget_bias, dropout, mode,
         single_cell = tf.nn.rnn_cell.ResidualWrapper(
             cell=single_cell, residual_fn=residual_fn)
 
+    # add summary to collection
+    for w in single_cell.variables:
+        tf.summary.histogram(w.name, w, collections=["eval"])
+
     return single_cell
 
 def _cell_list(unit_type, num_units, num_layers, num_residual_layers, depth,
@@ -39,17 +44,18 @@ def _cell_list(unit_type, num_units, num_layers, num_residual_layers, depth,
 
     cell_list = []
     for i in range(num_layers):
-        single_cell = _single_cell(
-            unit_type=unit_type,
-            num_units=num_units,
-            depth=depth,
-            forget_bias=forget_bias,
-            dropout=dropout,
-            mode=mode,
-            residual_connection=(i >= num_layers - num_residual_layers),
-            residual_fn=residual_fn
-        )
-        cell_list.append(single_cell)
+        with tf.name_scope("layer"+str(i)):
+            single_cell = _single_cell(
+                unit_type=unit_type,
+                num_units=num_units,
+                depth=depth,
+                forget_bias=forget_bias,
+                dropout=dropout,
+                mode=mode,
+                residual_connection=(i >= num_layers - num_residual_layers),
+                residual_fn=residual_fn
+            )
+            cell_list.append(single_cell)
     return cell_list
 
 def create_rnn_cell(unit_type, num_units, num_layers, num_residual_layers, depth,
