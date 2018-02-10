@@ -83,6 +83,8 @@ class Model(base_model.BaseModel):
             tf.summary.scalar("eval_loss", self.eval_loss, collections=["eval"])
             tf.summary.scalar("accuracy", self.accuracy, collections=["eval"])
             tf.add_to_collection("eval", cm_summary(self.confusion, hparams.num_labels))
+            for var in tf.trainable_variables():
+                tf.summary.histogram(var.name, var, collections=["eval"])
             self.eval_summary = tf.summary.merge_all("eval")
 
             # TODO: Add inference summaries
@@ -178,8 +180,11 @@ class Model(base_model.BaseModel):
             # mask out entries longer than target sequence length
             mask = tf.sequence_mask(tgt_seq_len, dtype=tf.float32)
 
+            #stop gradient thru labels by crossent op
+            labels = tf.stop_gradient(dec_outputs)
+
             crossent = tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits,
-                                                                  labels=dec_outputs,
+                                                                  labels=labels,
                                                                   name="crossent")
 
             loss = (tf.reduce_sum(crossent*mask)/(hparams.batch_size*tf.reduce_mean(tf.cast(tgt_seq_len,
@@ -220,7 +225,7 @@ class Model(base_model.BaseModel):
             eps = tf.maximum(min_eps, (eps - tf.divide(tf.cast(self.global_step, tf.float32),
                                                        tf.constant(260, dtype=tf.float32))))
         elif hparams.sched_decay == "inv_sig":
-            k = tf.constant(60.)
+            k = tf.constant(90.)
             start_offset = tf.constant(1.4)
             eps = (k / (k + tf.exp(tf.cast(self.global_step, tf.float32)/k)))/start_offset
         sample_probability = tf.constant(1.) - eps

@@ -32,10 +32,6 @@ def _single_cell(unit_type, num_units, depth, forget_bias, dropout, mode,
         single_cell = tf.nn.rnn_cell.ResidualWrapper(
             cell=single_cell, residual_fn=residual_fn)
 
-    # add summary to collection
-    for w in single_cell.variables:
-        tf.summary.histogram(w.name, w, collections=["eval"])
-
     return single_cell
 
 def _cell_list(unit_type, num_units, num_layers, num_residual_layers, depth,
@@ -44,18 +40,17 @@ def _cell_list(unit_type, num_units, num_layers, num_residual_layers, depth,
 
     cell_list = []
     for i in range(num_layers):
-        with tf.name_scope("layer"+str(i)):
-            single_cell = _single_cell(
-                unit_type=unit_type,
-                num_units=num_units,
-                depth=depth,
-                forget_bias=forget_bias,
-                dropout=dropout,
-                mode=mode,
-                residual_connection=(i >= num_layers - num_residual_layers),
-                residual_fn=residual_fn
-            )
-            cell_list.append(single_cell)
+        single_cell = _single_cell(
+            unit_type=unit_type,
+            num_units=num_units,
+            depth=depth,
+            forget_bias=forget_bias,
+            dropout=dropout,
+            mode=mode,
+            residual_connection=(i >= num_layers - num_residual_layers),
+            residual_fn=residual_fn
+        )
+        cell_list.append(single_cell)
     return cell_list
 
 def create_rnn_cell(unit_type, num_units, num_layers, num_residual_layers, depth,
