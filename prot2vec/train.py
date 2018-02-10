@@ -114,6 +114,7 @@ def train_cv(fold):
     # End of training
     summary_writer.close()
 
+print("Saving to %s" % (basedir))
 
 for i in range(2, 3):
     print("TRAINING FOLD %d" % i)
