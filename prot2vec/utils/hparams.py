@@ -2,7 +2,7 @@
 
 import tensorflow as tf
 
-__all__ = ["get_default_hparams",]
+__all__ = ["get_hparams",]
 
 VALID_HPARAMS = {
         "optimizer": ["adam", "sgd"],
@@ -42,10 +42,10 @@ def get_hparams(setting):
             momentum=0.0,
             max_gradient_norm=5.0,
             colocate_gradients_with_ops=False,
-            train_helper="sched",
+            train_helper="teacher",
             sched_decay="inv_sig",
-            num_keep_ckpts=2,
-            tag="2"
+            num_keep_ckpts=1,
+            #tag="2"
         )
 
     return hparams

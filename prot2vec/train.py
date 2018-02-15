@@ -8,6 +8,7 @@ from utils.hparams import get_hparams
 from utils.vocab_utils import create_table
 
 hparams = get_hparams("default")
+hparams.tag = ""
 
 basedir = hparams.logdir+"/LR%.3f_MG%1.1f_U%d_D%s_NL%d_NR%d_H%s_SD%s_DR%.2f_DP%d_OPT%s_%s" % \
                                                                     (hparams.learning_rate,
@@ -119,6 +120,6 @@ def train_cv(fold):
 
 print("Saving to %s" % (basedir))
 
-for i in range(2, 3):
+for i in range(1, 2):
     print("TRAINING FOLD %d" % i)
     train_cv(i)
