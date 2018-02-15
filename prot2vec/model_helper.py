@@ -7,7 +7,7 @@ __all__ = [
 ]
 
 def _single_cell(unit_type, num_units, depth, forget_bias, dropout, mode,
-                 residual_connection=False, residual_fn=None):
+                 residual_connection=False, residual_fn=None, device_str=None):
     """Define a single recurrent cell."""
 
     # Set dropout to 0 if not training
@@ -21,6 +21,9 @@ def _single_cell(unit_type, num_units, depth, forget_bias, dropout, mode,
         single_cell = NLSTMCell(name="nlstm",
                                 num_units=num_units,
                                 depth=depth)
+    elif unit_type == "gru":
+        single_cell = tf.nn.rnn_cell.GRUCell(name="gru":
+                                             num_units=num_units)
     else:
         raise ValueError("Unknown unit type %s!" % unit_type)
 
@@ -32,10 +35,13 @@ def _single_cell(unit_type, num_units, depth, forget_bias, dropout, mode,
         single_cell = tf.nn.rnn_cell.ResidualWrapper(
             cell=single_cell, residual_fn=residual_fn)
 
+    if device_str:
+        single_cell = tf.nn.rnn_cell.DeviceWrapper(single_cell, device_str)
+
     return single_cell
 
 def _cell_list(unit_type, num_units, num_layers, num_residual_layers, depth,
-               forget_bias, dropout, mode, residual_fn=None):
+               forget_bias, dropout, mode, residual_fn=None, num_gpus=1, base_gpu=0):
     """Create a list of RNN cells."""
 
     cell_list = []

@@ -6,7 +6,7 @@ __all__ = ["get_default_hparams",]
 
 VALID_HPARAMS = {
         "optimizer": ["adam", "sgd"],
-        "unit_type": ["lstm", "nlstm"],
+        "unit_type": ["lstm", "nlstm", "gru"],
         "train_helper": ["teacher", "sched"],
         "sched_decay": ["linear", "expon", "inv_sig"],
         "initializer": ["glorot_normal", "glorot_uniform", "orthogonal"],
