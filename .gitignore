@@ -102,3 +102,5 @@ ENV/
 
 # .swp files
 *.swp
+
+env_setup.sh
