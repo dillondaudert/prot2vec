@@ -22,7 +22,7 @@ def _single_cell(unit_type, num_units, depth, forget_bias, dropout, mode,
                                 num_units=num_units,
                                 depth=depth)
     elif unit_type == "gru":
-        single_cell = tf.nn.rnn_cell.GRUCell(name="gru":
+        single_cell = tf.nn.rnn_cell.GRUCell(name="gru",
                                              num_units=num_units)
     else:
         raise ValueError("Unknown unit type %s!" % unit_type)
