@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # basic example of training a network end-to-end
-import tensorflow as tf
+from time import process_time
+import tensorflow as tf, numpy as np
 from dataset import pssp_dataset
 from model_helper import *
 import model
 from utils.hparams import get_hparams
 from utils.vocab_utils import create_table
 
-hparams = get_hparams("default")
+hparams = get_hparams("long")
 hparams.tag = ""
 
 basedir = hparams.logdir+"/LR%.3f_MG%1.1f_U%d_D%s_NL%d_NR%d_H%s_SD%s_DR%.2f_DP%d_OPT%s_%s" % \
@@ -82,16 +83,20 @@ def train_cv(fold):
     # Train for num_epochs
     for i in range(hparams.num_epochs):
         train_sess.run([train_iterator.initializer])
+        start_time = process_time()
+        step_time = []
         while True:
             try:
+                curr_time = process_time()
                 _, train_loss, global_step, _, summary = train_model.train(train_sess)
+                step_time.append(process_time() - curr_time)
 
                 # write train summaries
                 if global_step == 1:
                     summary_writer.add_summary(summary, global_step)
                 if global_step % 5 == 0:
                     summary_writer.add_summary(summary, global_step)
-                    print("Step: %d, Training Loss: %f" % (global_step, train_loss))
+                    print("Step: %d, Training Loss: %f, Avg Step/Sec: %2.2f" % (global_step, train_loss, np.mean(step_time)))
 
                 if global_step % 20 == 0:
                     checkpoint_path = train_model.saver.save(train_sess,
@@ -117,6 +122,7 @@ def train_cv(fold):
 
     # End of training
     summary_writer.close()
+    print("Total Training Time: %4.2f" % (process_time() - start_time))
 
 print("Saving to %s" % (basedir))
 
