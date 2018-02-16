@@ -223,7 +223,7 @@ class Model(base_model.BaseModel):
         elif hparams.sched_decay == "linear":
             min_eps = tf.constant(0.035)
             eps = tf.maximum(min_eps, (eps - tf.divide(tf.cast(self.global_step, tf.float32),
-                                                       tf.constant(260, dtype=tf.float32))))
+                                                       tf.constant(4600, dtype=tf.float32))))
         elif hparams.sched_decay == "inv_sig":
             k = tf.constant(90.)
             start_offset = tf.constant(1.4)
