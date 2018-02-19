@@ -3,12 +3,13 @@
 from time import process_time
 import tensorflow as tf, numpy as np
 from dataset import pssp_dataset
+from synth_dataset import copytask_dataset
 from model_helper import *
 import model
 from utils.hparams import get_hparams
 from utils.vocab_utils import create_table
 
-hparams = get_hparams("long")
+hparams = get_hparams("copy")
 hparams.tag = ""
 
 basedir = hparams.logdir+"/LR%.3f_MG%1.1f_U%d_D%s_NL%d_NR%d_H%s_SD%s_DR%.2f_DP%d_OPT%s_%s" % \
@@ -25,9 +26,12 @@ basedir = hparams.logdir+"/LR%.3f_MG%1.1f_U%d_D%s_NL%d_NR%d_H%s_SD%s_DR%.2f_DP%d
                                                                     hparams.optimizer,
                                                                     hparams.tag)
 
-train_files = ["/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_train_%d.tfrecords" % (i) for i in range(1, 6)]
-valid_files = ["/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_valid_%d.tfrecords" % (i) for i in range(1, 6)]
-test_files = ["/home/dillon/data/cpdb/cpdb_513.tf_records"]
+#train_files = ["/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_train_%d.tfrecords" % (i) for i in range(1, 6)]
+#valid_files = ["/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_valid_%d.tfrecords" % (i) for i in range(1, 6)]
+#test_files = ["/home/dillon/data/cpdb/cpdb_513.tf_records"]
+
+train_files = ["/home/dillon/data/synthetic/copy/train_25L_10V.tfrecords"]
+valid_files = ["/home/dillon/data/synthetic/copy/valid_25L_10V.tfrecords"]
 
 
 def train_cv(fold):
