@@ -9,7 +9,7 @@ import model
 from utils.hparams import get_hparams
 from utils.vocab_utils import create_table
 
-hparams = get_hparams("copy")
+hparams = get_hparams("default")
 hparams.tag = ""
 
 basedir = hparams.logdir+"/LR%.3f_MG%1.1f_U%d_D%s_NL%d_NR%d_H%s_SD%s_DR%.2f_DP%d_OPT%s_%s" % \
@@ -26,12 +26,12 @@ basedir = hparams.logdir+"/LR%.3f_MG%1.1f_U%d_D%s_NL%d_NR%d_H%s_SD%s_DR%.2f_DP%d
                                                                     hparams.optimizer,
                                                                     hparams.tag)
 
-#train_files = ["/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_train_%d.tfrecords" % (i) for i in range(1, 6)]
-#valid_files = ["/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_valid_%d.tfrecords" % (i) for i in range(1, 6)]
-#test_files = ["/home/dillon/data/cpdb/cpdb_513.tf_records"]
+train_files = ["/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_train_%d.tfrecords" % (i) for i in range(1, 6)]
+valid_files = ["/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_valid_%d.tfrecords" % (i) for i in range(1, 6)]
+test_files = ["/home/dillon/data/cpdb/cpdb_513.tf_records"]
 
-train_files = ["/home/dillon/data/synthetic/copy/train_25L_10V.tfrecords"]
-valid_files = ["/home/dillon/data/synthetic/copy/valid_25L_10V.tfrecords"]
+#train_files = ["/home/dillon/data/synthetic/copy/train_25L_10V.tfrecords"]
+#valid_files = ["/home/dillon/data/synthetic/copy/valid_25L_10V.tfrecords"]
 
 
 def train_cv(fold):
@@ -53,7 +53,7 @@ def train_cv(fold):
         train_iterator = train_dataset.make_initializable_iterator()
         ss_table = create_table("ss")
 
-        train_model = model.Model(hparams=hparams,
+        train_model = model.CPDBModel(hparams=hparams,
                                   iterator=train_iterator,
                                   mode=tf.contrib.learn.ModeKeys.TRAIN,
                                   target_lookup_table=ss_table)
@@ -69,7 +69,7 @@ def train_cv(fold):
         eval_iterator = eval_dataset.make_initializable_iterator()
         ss_table = create_table("ss")
 
-        eval_model = model.Model(hparams=hparams,
+        eval_model = model.CPDBModel(hparams=hparams,
                                  iterator=eval_iterator,
                                  mode=tf.contrib.learn.ModeKeys.EVAL,
                                  target_lookup_table=ss_table)
