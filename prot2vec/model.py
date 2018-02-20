@@ -1,9 +1,12 @@
 """Sequence-to-sequence model using a dynamic RNN."""
 import tensorflow as tf
 import base_model
-from model_helper import *
+import model_helper as mdl_help
 from metrics import streaming_confusion_matrix, cm_summary
 
+__all__ = [
+    "CPDBModel",
+]
 
 class CPDBModel(base_model.BaseModel):
     """A sequence-to-sequence model for the CPDB data.
@@ -27,14 +30,14 @@ class CPDBModel(base_model.BaseModel):
             if hparams.dense_input:
                 enc_inputs = dense_input_layer(enc_inputs)
 
-            enc_cells = create_rnn_cell(unit_type=hparams.unit_type,
-                                        num_units=hparams.num_units,
-                                        num_layers=hparams.num_layers,
-                                        depth=hparams.depth,
-                                        num_residual_layers=hparams.num_residual_layers,
-                                        forget_bias=hparams.forget_bias,
-                                        dropout=hparams.dropout,
-                                        mode=self.mode)
+            enc_cells = mdl_help.create_rnn_cell(unit_type=hparams.unit_type,
+                                                 num_units=hparams.num_units,
+                                                 num_layers=hparams.num_layers,
+                                                 depth=hparams.depth,
+                                                 num_residual_layers=hparams.num_residual_layers,
+                                                 forget_bias=hparams.forget_bias,
+                                                 dropout=hparams.dropout,
+                                                 mode=self.mode)
 
             # run encoder
             enc_outputs, enc_state = tf.nn.dynamic_rnn(cell=enc_cells,
@@ -47,14 +50,14 @@ class CPDBModel(base_model.BaseModel):
 
             # TODO: Add Inference decoder
             # create decoder
-            dec_cells = create_rnn_cell(unit_type=hparams.unit_type,
-                                        num_units=hparams.num_units,
-                                        num_layers=hparams.num_layers,
-                                        depth=hparams.depth,
-                                        num_residual_layers=hparams.num_residual_layers,
-                                        forget_bias=hparams.forget_bias,
-                                        dropout=hparams.dropout,
-                                        mode=self.mode)
+            dec_cells = mdl_help.create_rnn_cell(unit_type=hparams.unit_type,
+                                                 num_units=hparams.num_units,
+                                                 num_layers=hparams.num_layers,
+                                                 depth=hparams.depth,
+                                                 num_residual_layers=hparams.num_residual_layers,
+                                                 forget_bias=hparams.forget_bias,
+                                                 dropout=hparams.dropout,
+                                                 mode=self.mode)
 
             # output project layer
             projection_layer = tf.layers.Dense(hparams.num_labels, use_bias=False)
