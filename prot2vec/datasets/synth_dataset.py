@@ -57,7 +57,8 @@ def copytask_dataset(filename, shuffle, num_features, num_labels, batch_size=32,
     # apply parser transformation to parse out individual samples
     dataset = dataset.map(parser, num_parallel_calls=4)
 
-#    dataset = dataset.cache()
+    # cache the dataset
+    dataset = dataset.cache()
 
     dataset = dataset.padded_batch(
             batch_size,
@@ -67,6 +68,6 @@ def copytask_dataset(filename, shuffle, num_features, num_labels, batch_size=32,
                            tf.TensorShape([]))
             )
 
-    dataset = dataset.prefetch(10)
+    dataset = dataset.prefetch(1)
 
     return dataset
