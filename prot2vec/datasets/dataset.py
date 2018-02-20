@@ -14,7 +14,7 @@ def pssp_dataset(filename, shuffle, num_features, num_labels, batch_size=32, num
     Read the cpdb dataset and return as a TensorFlow Dataset.
     Args:
         filename    - a Tensor containing a list of strings of input files
-        shuffle     - a boolean Tensor
+        shuffle     - a bool
         batch_size  - the integer size of each minibatch (Default: 32)
         num_epochs  - how many epochs to repeat the dataset (Default: None)
     """
@@ -48,12 +48,10 @@ def pssp_dataset(filename, shuffle, num_features, num_labels, batch_size=32, num
 
 
     # shuffle logic
-    def shfl(dataset):
-#        dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=6000, count=num_epochs))
-        dataset = dataset.shuffle(buffer_size=6000)
+    if shuffle:
+        dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=6000, count=num_epochs))
+    else:
         dataset = dataset.repeat(num_epochs)
-        return tf.no_op()
-    tf.cond(shuffle, lambda: shfl(dataset), lambda: tf.no_op())
 
     # apply parser transformation to parse out individual samples
     dataset = dataset.map(parser, num_parallel_calls=4)
@@ -113,12 +111,10 @@ def autoenc_dataset(filename, shuffle, num_features, num_labels, batch_size=32, 
 
 
     # shuffle logic
-    def shfl(dataset):
-#        dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=6000, count=num_epochs))
-        dataset = dataset.shuffle(buffer_size=6000)
+    if shuffle:
+        dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=6000, count=num_epochs))
+    else:
         dataset = dataset.repeat(num_epochs)
-        return tf.no_op()
-    tf.cond(shuffle, lambda: shfl(dataset), lambda: tf.no_op())
 
     # apply parser transformation to parse out individual samples
     dataset = dataset.map(parser, num_parallel_calls=4)

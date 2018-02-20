@@ -46,12 +46,13 @@ def copytask_dataset(filename, shuffle, num_features, num_labels, batch_size=32,
 
 
     # shuffle logic
-    def shfl(dataset):
-#        dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=6000, count=num_epochs))
-        dataset = dataset.shuffle(buffer_size=6000)
+    if shuffle:
+        dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=6000, count=num_epochs))
+    else:
         dataset = dataset.repeat(num_epochs)
-        return tf.no_op()
-    tf.cond(shuffle, lambda: shfl(dataset), lambda: tf.no_op())
+
+    # if shuffling, then call the shuffle_and_repeat op. Else just repeat
+#    dataset = tf.cond(shuffle, true_fn=lambda: shfl(dataset), false_fn=lambda: dataset.repeat(num_epochs))
 
     # apply parser transformation to parse out individual samples
     dataset = dataset.map(parser, num_parallel_calls=4)

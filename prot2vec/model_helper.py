@@ -74,7 +74,7 @@ def create_model(hparams, mode):
 
     with graph.as_default():
         dataset = dataset_creator(tf.constant(data_file, tf.string),
-                                  tf.constant(shuffle, tf.bool),
+                                  shuffle,
                                   hparams.num_features,
                                   hparams.num_labels,
                                   batch_size=hparams.batch_size,
