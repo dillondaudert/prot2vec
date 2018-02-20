@@ -23,6 +23,7 @@ def get_hparams(setting):
     """Return the hyperparameter settings given by name."""
     if setting == "default":
         hparams = tf.contrib.training.HParams(
+            model="cpdb",
             logdir="/home/dillon/thesis/models/prot2vec/default",
             num_features=43,
             num_labels=9,
