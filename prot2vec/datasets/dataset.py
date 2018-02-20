@@ -9,7 +9,7 @@ __all__ = [
 
 HOME = str(Path.home())
 
-def pssp_dataset(filename, shuffle, batch_size=32, num_epochs=None):
+def pssp_dataset(filename, shuffle, num_features, num_labels, batch_size=32, num_epochs=None):
     """
     Read the cpdb dataset and return as a TensorFlow Dataset.
     Args:
@@ -36,8 +36,8 @@ def pssp_dataset(filename, shuffle, batch_size=32, num_epochs=None):
         seq_len = tf.cast(seq_len, tf.int32)
         seq = tf.sparse_tensor_to_dense(parsed["seq_data"])
         label = tf.sparse_tensor_to_dense(parsed["label_data"])
-        src = tf.reshape(seq, [-1, 43])
-        tgt = tf.reshape(label, [-1, 9])
+        src = tf.reshape(seq, [-1, num_features])
+        tgt = tf.reshape(label, [-1, num_labels])
 
         # prepend and append 'NoSeq' to create dec_input / dec_target
         noseq = tf.constant([[0., 0., 0., 0., 0., 0., 0., 0., 1.]])
@@ -62,9 +62,9 @@ def pssp_dataset(filename, shuffle, batch_size=32, num_epochs=None):
 
     dataset = dataset.padded_batch(
             batch_size,
-            padded_shapes=(tf.TensorShape([None, 43]),
-                           tf.TensorShape([None, 9]),
-                           tf.TensorShape([None, 9]),
+            padded_shapes=(tf.TensorShape([None, num_features]),
+                           tf.TensorShape([None, num_labels]),
+                           tf.TensorShape([None, num_labels]),
                            tf.TensorShape([]))
             )
 
@@ -72,7 +72,7 @@ def pssp_dataset(filename, shuffle, batch_size=32, num_epochs=None):
 
     return dataset
 
-def autoenc_dataset(filename, shuffle, batch_size=32, num_epochs=None):
+def autoenc_dataset(filename, shuffle, num_features, num_labels, batch_size=32, num_epochs=None):
     """
     Read the cpdb autoencode dataset and return as a TensorFlow Dataset.
     Args:
@@ -99,8 +99,8 @@ def autoenc_dataset(filename, shuffle, batch_size=32, num_epochs=None):
         seq_len = tf.cast(seq_len, tf.int32)
         seq = tf.sparse_tensor_to_dense(parsed["seq_data"])
         label = tf.sparse_tensor_to_dense(parsed["label_data"])
-        src = tf.reshape(seq, [-1, 43])
-        tgt = tf.reshape(label, [-1, 22])
+        src = tf.reshape(seq, [-1, num_features])
+        tgt = tf.reshape(label, [-1, num_labels])
 
         # prepend and append 'NoSeq' to create dec_input / dec_target
         noseq = tf.constant([[0., 0., 0., 0., 0., 0., 0., 0.,
@@ -127,9 +127,9 @@ def autoenc_dataset(filename, shuffle, batch_size=32, num_epochs=None):
 
     dataset = dataset.padded_batch(
             batch_size,
-            padded_shapes=(tf.TensorShape([None, 43]),
-                           tf.TensorShape([None, 22]),
-                           tf.TensorShape([None, 22]),
+            padded_shapes=(tf.TensorShape([None, num_features]),
+                           tf.TensorShape([None, num_labels]),
+                           tf.TensorShape([None, num_labels]),
                            tf.TensorShape([]))
             )
 
