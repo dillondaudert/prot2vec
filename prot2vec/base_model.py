@@ -9,7 +9,7 @@ from metrics import streaming_confusion_matrix, cm_summary
 
 class BaseModel(object):
 
-    def __init__(self, hparams, iterator, mode, target_lookup_table, scope=None):
+    def __init__(self, hparams, iterator, mode, target_lookup_table=None, scope=None):
         self.hparams = hparams
         self.iterator = iterator
         self.mode = mode
