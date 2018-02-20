@@ -1,9 +1,8 @@
 """Utilities for input pipelines."""
 
 from pathlib import Path
-import tensorflow as tf
-from .cpdb_dataset import pssp_dataset
-from .synth_dataset import copytask_dataset
+import tensorflow as tf, numpy as np
+import .parsers as prs
 
 def create_dataset(hparams, mode):
     """
@@ -35,28 +34,60 @@ def create_dataset(hparams, mode):
         print("Input file must be specified in create_dataset()!")
         exit()
 
+    if hparams.model == "cpdb":
+        parser = prs.cpdb_parser
+    elif hparams.model == "copy":
+        parser = prs.copytask_parser
+    elif hparams.model == "autoenc":
+        parser = prs.autoenc_parser
+
     # create the initial dataset from the file
     if input_file.suffix == ".tfrecords":
         dataset = tf.data.TFRecordDataset(str(input_file.absolute()))
 
-    elif input_file.suffix == ".csv":
-        # read in the data and create dataset
-        dataset = load_dataset_from_csv(str(input_file.absolute()))
+    elif input_file.suffix == ".npz":
+        dataset = load_dataset_from_npz(str(input_file.absolute()))
+        parser = None
 
     # perform the appropriate transformations and return
-    if hparams.model == "cpdb":
-        dataset_creator = pssp_dataset
-    elif hparams.model == "copy":
-        dataset_creator = copytask_dataset
 
-    dataset = dataset_creator(dataset=dataset,
-                              shuffle=shuffle,
-                              num_features=hparams.num_features,
-                              num_labels=hparams.num_labels,
-                              batch_size=batch_size,
-                              num_epochs=num_epochs)
+    if shuffle:
+        dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=batch_size*100, count=num_epochs))
+    else:
+        dataset = dataset.repeat(num_epochs)
+
+    if parser is not None:
+        dataset = dataset.map(parser, num_parallel_calls=4)
+
+    dataset = dataset.cache()
+
+    dataset = dataset.padded_batch(
+            batch_size,
+            padded_shapes=(tf.TensorShape([None, hparams.num_features]),
+                           tf.TensorShape([None, hparams.num_labels]),
+                           tf.TensorShape([None, hparams.num_labels]),
+                           tf.TensorShape([]))
+
+    dataset = dataset.prefetch(1)
 
     return dataset
 
-def load_dataset_from_csv(filename):
-    return
+def load_dataset_from_npz(filename):
+    """
+    Create a tf.data.Dataset source from a .npz file.
+    Returns:
+        dataset - a tf.data.Dataset object
+    """
+
+    npzfile = np.load(filename)
+    sample_list = npzfile["arr_0"]
+    num_values = sample_list[0].shape[1]
+    def sample_gen():
+        for s in sample_list:
+            yield (s, s.shape[0])
+
+    dataset = tf.data.Dataset.from_generator(sample_gen,
+                                             (tf.float32, tf.int32),
+                                             (tf.TensorShape([None, num_values]), tf.TensorShape([])))
+
+    return dataset
