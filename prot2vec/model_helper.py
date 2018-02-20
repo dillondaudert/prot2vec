@@ -3,8 +3,8 @@ import tensorflow as tf
 from collections import namedtuple
 from rnn_cell import NLSTMCell
 import model as mdl
-from dataset import *
-from synth_dataset import *
+from datasets.dataset import *
+from datasets.synth_dataset import *
 
 __all__ = [
     "create_rnn_cell", "create_model", "multiclass_sample",

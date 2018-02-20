@@ -1,8 +1,8 @@
 # basic example of training a network end-to-end
 from time import process_time
 import tensorflow as tf, numpy as np
-from dataset import pssp_dataset
-from synth_dataset import copytask_dataset
+from datasets.dataset import pssp_dataset
+from datasets.synth_dataset import copytask_dataset
 from model_helper import create_model
 from utils.hparams import get_hparams
 from utils.vocab_utils import create_table
