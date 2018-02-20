@@ -7,8 +7,19 @@ from dataset import *
 from synth_dataset import *
 
 __all__ = [
-    "create_rnn_cell", "create_model",
+    "create_rnn_cell", "create_model", "multiclass_sample",
 ]
+
+def multiclass_sample(outputs):
+    """
+    Sample from a multiclass distribution where the classes are not mutually
+    exclusive.
+    Takes a uniform sample from each output class, returns a float Tensor of 0s
+    and 1s.
+    """
+    probs = tf.random_uniform(shape=outputs.shape, maxval=1.)
+    leq = tf.less_equal(probs, outputs)
+    return tf.cast(leq, tf.float32)
 
 ModelTuple = namedtuple('ModelTuple', ['graph', 'iterator', 'model', 'session'])
 
