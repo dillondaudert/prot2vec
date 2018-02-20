@@ -79,6 +79,7 @@ def get_hparams(setting):
 
     elif setting == "copy":
         hparams = tf.contrib.training.HParams(
+            model="copy",
             logdir="/home/dillon/thesis/models/prot2vec/copy",
             num_features=10,
             num_labels=10,
@@ -91,17 +92,17 @@ def get_hparams(setting):
             depth=0,
             forget_bias=1,
             dropout=0.0,
-            batch_size=50,
-            num_epochs=50,
+            batch_size=128,
+            num_epochs=100,
             optimizer="sgd",
-            learning_rate=0.05,
+            learning_rate=0.5,
             momentum=0.0,
             max_gradient_norm=5.0,
             colocate_gradients_with_ops=False,
             train_helper="sched",
-            sched_decay="inv_sig",
+            sched_decay="linear",
             num_keep_ckpts=1,
-            #tag="2"
+            tag="sched50k"
         )
 
     return hparams

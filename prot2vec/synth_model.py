@@ -5,11 +5,11 @@ import model_helper as mdl_help
 from metrics import streaming_confusion_matrix, cm_summary
 
 __all__ = [
-    "CPDBModel",
+    "CopyModel",
 ]
 
-class CPDBModel(base_model.BaseModel):
-    """A sequence-to-sequence model for the CPDB data.
+class CopyModel(base_model.BaseModel):
+    """A sequence-to-sequence model for the copy task on synthetic data.
     """
 
     def _build_graph(self, hparams, scope=None):
@@ -68,21 +68,19 @@ class CPDBModel(base_model.BaseModel):
                     helper = tf.contrib.seq2seq.TrainingHelper(inputs=dec_inputs,
                                                                sequence_length=tgt_seq_len)
                 elif hparams.train_helper == "sched":
-                    embedding = tf.eye(hparams.num_labels)
                     # scheduled sampling
                     helper = tf.contrib.seq2seq.\
-                             ScheduledEmbeddingTrainingHelper(inputs=dec_inputs,
-                                                              sequence_length=tgt_seq_len,
-                                                              embedding=embedding,
-                                                              sampling_probability=self.sample_probability,
-                                                              )
+                             ScheduledOutputTrainingHelper(inputs=dec_inputs,
+                                                           sequence_length=tgt_seq_len,
+                                                           sampling_probability=self.sample_probability,
+                                                           next_inputs_fn=lambda x: mdl_help.multiclass_sample(x),
+                                                           )
             elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
-                embedding = tf.eye(hparams.num_labels)
                 helper = tf.contrib.seq2seq.\
-                         ScheduledEmbeddingTrainingHelper(inputs=dec_inputs,
-                                                          sequence_length=tgt_seq_len,
-                                                          embedding=embedding,
-                                                          sampling_probability=tf.constant(1.0))
+                         ScheduledOutputTrainingHelper(inputs=dec_inputs,
+                                                       sequence_length=tgt_seq_len,
+                                                       sampling_probability=tf.constant(1.0),
+                                                       next_inputs_fn=lambda x: mdl_help.multiclass_sample(x))
 
             decoder = tf.contrib.seq2seq.BasicDecoder(cell=dec_cells,
                                                       helper=helper,
@@ -98,14 +96,15 @@ class CPDBModel(base_model.BaseModel):
             logits = final_outputs.rnn_output
 
             # mask out entries longer than target sequence length
-            mask = tf.sequence_mask(tgt_seq_len, dtype=tf.float32)
+            # TODO: Need this to have one entry per class, unlike for one-hot categorical
+            mask = tf.expand_dims(tf.sequence_mask(tgt_seq_len, dtype=tf.float32), axis=-1)
 
             #stop gradient thru labels by crossent op
             labels = tf.stop_gradient(dec_outputs)
 
-            crossent = tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits,
-                                                                  labels=labels,
-                                                                  name="crossent")
+            crossent = tf.nn.sigmoid_cross_entropy_with_logits(logits=logits,
+                                                               labels=labels,
+                                                               name="crossent")
 
             loss = (tf.reduce_sum(crossent*mask)/(hparams.batch_size*tf.reduce_mean(tf.cast(tgt_seq_len,
                                                                                             tf.float32))))
@@ -113,21 +112,14 @@ class CPDBModel(base_model.BaseModel):
             metrics = []
             update_ops = []
             if self.mode == tf.contrib.learn.ModeKeys.EVAL:
-                predictions = tf.argmax(input=logits, axis=-1)
-                targets = tf.argmax(input=dec_outputs, axis=-1)
+                # for predictions, we will scale the logits and then count each class as
+                # active if it is over .5
+                predictions = mdl_help.multiclass_prediction(logits)
+                targets = dec_outputs
                 acc, acc_update = tf.metrics.accuracy(predictions=predictions,
                                                       labels=targets,
                                                       weights=mask)
-                # flatten for confusion matrix
-                targets_flat = tf.reshape(targets, [-1])
-                predictions_flat = tf.reshape(predictions, [-1])
-                mask_flat = tf.reshape(mask, [-1])
-                cm, cm_update = streaming_confusion_matrix(labels=targets_flat,
-                                                           predictions=predictions_flat,
-                                                           num_classes=hparams.num_labels,
-                                                           weights=mask_flat)
-                tf.add_to_collection("eval", cm_summary(cm, hparams.num_labels))
-                metrics = [acc, cm]
-                update_ops = [acc_update, cm_update]
+                metrics = [acc]
+                update_ops = [acc_update]
 
             return logits, loss, metrics, update_ops

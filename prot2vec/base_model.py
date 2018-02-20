@@ -4,7 +4,6 @@ import abc
 import tensorflow as tf
 import base_model
 from model_helper import *
-from metrics import streaming_confusion_matrix, cm_summary
 
 
 class BaseModel(object):
@@ -36,7 +35,6 @@ class BaseModel(object):
         elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
             self.eval_loss = res[1]
             self.accuracy = res[2][0]
-            self.confusion = res[2][1]
             self.update_metrics = res[3]
 
         elif self.mode == tf.contrib.learn.ModeKeys.INFER:
@@ -84,7 +82,6 @@ class BaseModel(object):
             # Evaluation summaries
             tf.summary.scalar("eval_loss", self.eval_loss, collections=["eval"])
             tf.summary.scalar("accuracy", self.accuracy, collections=["eval"])
-            tf.add_to_collection("eval", cm_summary(self.confusion, hparams.num_labels))
             for var in tf.trainable_variables():
                 tf.summary.histogram(var.name, var, collections=["eval"])
             self.eval_summary = tf.summary.merge_all("eval")
@@ -115,7 +112,7 @@ class BaseModel(object):
         elif hparams.sched_decay == "linear":
             min_eps = tf.constant(0.035)
             eps = tf.maximum(min_eps, (eps - tf.divide(tf.cast(self.global_step, tf.float32),
-                                                       tf.constant(4600, dtype=tf.float32))))
+                                                       tf.constant(36000, dtype=tf.float32))))
         elif hparams.sched_decay == "inv_sig":
             k = tf.constant(90.)
             start_offset = tf.constant(1.4)

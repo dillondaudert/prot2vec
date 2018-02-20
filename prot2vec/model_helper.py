@@ -2,23 +2,38 @@
 import tensorflow as tf
 from collections import namedtuple
 from nlstm.rnn_cell import NLSTMCell
-import model as mdl
+from model import CPDBModel
+from synth_model import CopyModel
 from datasets.dataset import *
 from datasets.synth_dataset import *
 
 __all__ = [
-    "create_rnn_cell", "create_model", "multiclass_sample",
+    "create_rnn_cell", "create_model", "multiclass_sample", "multiclass_prediction",
 ]
 
-def multiclass_sample(outputs):
+def multiclass_prediction(logits):
+    """
+    Calculate the predictions for a multiclass output where the classes are not
+    mutually exclusive.
+    The logits are scaled via a sigmoid, and each class is counted as active if
+    the value is greater than .5
+    """
+
+    scaled_logits = tf.sigmoid(logits)
+    preds = tf.greater_equal(scaled_logits, tf.constant(0.5, tf.float32))
+    return tf.cast(preds, tf.float32)
+
+def multiclass_sample(logits):
     """
     Sample from a multiclass distribution where the classes are not mutually
     exclusive.
     Takes a uniform sample from each output class, returns a float Tensor of 0s
     and 1s.
     """
-    probs = tf.random_uniform(shape=outputs.shape, maxval=1.)
-    leq = tf.less_equal(probs, outputs)
+    scaled_logits = tf.sigmoid(logits)
+    probs = tf.random_uniform(shape=tf.shape(logits), maxval=1.)
+    leq = tf.less_equal(probs, scaled_logits)
+#    tf.summary.histogram("scaled_logits", scaled_logits, collections=["eval"])
     return tf.cast(leq, tf.float32)
 
 ModelTuple = namedtuple('ModelTuple', ['graph', 'iterator', 'model', 'session'])
@@ -34,11 +49,10 @@ def create_model(hparams, mode):
 
     if hparams.model == "cpdb":
         dataset_creator = pssp_dataset
-        model_creator = mdl.CPDBModel
+        model_creator = CPDBModel
     elif hparams.model == "copy":
         dataset_creator = copytask_dataset
-        # TODO: replace this once copy model is implemented
-        model_creator = None
+        model_creator = CopyModel
     else:
         print("Error! Model %s unrecognized" % (hparams.model))
         exit()
