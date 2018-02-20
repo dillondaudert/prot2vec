@@ -1,7 +1,7 @@
 """Utility functions for building models."""
 import tensorflow as tf
 from collections import namedtuple
-from rnn_cell import NLSTMCell
+from nlstm.rnn_cell import NLSTMCell
 import model as mdl
 from datasets.dataset import *
 from datasets.synth_dataset import *
