@@ -72,7 +72,7 @@ def get_hparams(setting):
             forget_bias=1,
             dropout=0.0,
             batch_size=128,
-            num_epochs=100,
+            num_epochs=500,
             optimizer="sgd",
             learning_rate=0.5,
             momentum=0.0,
@@ -81,7 +81,7 @@ def get_hparams(setting):
             train_helper="sched",
             sched_decay="linear",
             num_keep_ckpts=1,
-            tag="sched_10-50L_10k"
+            tag="sched_10-50L_12V_10k_2"
         )
 
     return hparams
