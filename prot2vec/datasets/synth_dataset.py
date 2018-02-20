@@ -9,7 +9,7 @@ __all__ = [
 
 HOME = str(Path.home())
 
-def copytask_dataset(filename, shuffle, batch_size=32, num_epochs=None):
+def copytask_dataset(filename, shuffle, num_features, num_labels, batch_size=32, num_epochs=None):
     """
     Read the copy task dataset and return as a TensorFlow Dataset.
     Args:
@@ -38,9 +38,9 @@ def copytask_dataset(filename, shuffle, batch_size=32, num_epochs=None):
         seq = tf.sparse_tensor_to_dense(parsed["seq_data"])
         tgt_in = tf.sparse_tensor_to_dense(parsed["tgt_in"])
         tgt_out = tf.sparse_tensor_to_dense(parsed["tgt_out"])
-        src = tf.reshape(seq, [-1, 10])
-        tgt_in = tf.reshape(tgt_in, [-1, 10])
-        tgt_out = tf.reshape(tgt_out, [-1, 10])
+        src = tf.reshape(seq, [-1, num_features])
+        tgt_in = tf.reshape(tgt_in, [-1, num_labels])
+        tgt_out = tf.reshape(tgt_out, [-1, num_labels])
 
         return src, tgt_in, tgt_out, seq_len
 
@@ -60,9 +60,9 @@ def copytask_dataset(filename, shuffle, batch_size=32, num_epochs=None):
 
     dataset = dataset.padded_batch(
             batch_size,
-            padded_shapes=(tf.TensorShape([None, 10]),
-                           tf.TensorShape([None, 10]),
-                           tf.TensorShape([None, 10]),
+            padded_shapes=(tf.TensorShape([None, num_features]),
+                           tf.TensorShape([None, num_labels]),
+                           tf.TensorShape([None, num_labels]),
                            tf.TensorShape([]))
             )
 
