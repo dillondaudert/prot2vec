@@ -1,10 +1,67 @@
 """Utility functions for building models."""
 import tensorflow as tf
+from collections import namedtuple
 from rnn_cell import NLSTMCell
+import model as mdl
+from dataset import *
+from synth_dataset import *
 
 __all__ = [
-    "create_rnn_cell",
+    "create_rnn_cell", "create_model",
 ]
+
+ModelTuple = namedtuple('ModelTuple', ['graph', 'iterator', 'model', 'session'])
+
+def create_model(hparams, mode):
+    """
+    Return a tuple of a tf Graph, Iterator, Model, and Session for training.
+    Args:
+        hparams - Hyperparameter named tuple
+        mode    - the tf.contrib.learn mode (TRAIN, EVAL, INFER)
+    Returns a ModelTuple(graph, iterator, model, session)
+    """
+
+    if hparams.model == "cpdb":
+        dataset_creator = pssp_dataset
+        model_creator = mdl.CPDBModel
+    elif hparams.model == "copy":
+        dataset_creator = copytask_dataset
+        # TODO: replace this once copy model is implemented
+        model_creator = None
+    else:
+        print("Error! Model %s unrecognized" % (hparams.model))
+        exit()
+
+    if mode == tf.contrib.learn.ModeKeys.TRAIN:
+        shuffle = True
+        data_file = hparams.train_file
+    elif mode == tf.contrib.learn.ModeKeys.EVAL:
+        shuffle = False
+        data_file = hparams.valid_file
+    else:
+        shuffle = False
+        data_file = hparams.infer_file
+
+    graph = tf.Graph()
+
+    with graph.as_default():
+        dataset = dataset_creator(tf.constant(data_file, tf.string),
+                                  tf.constant(shuffle, tf.bool),
+                                  batch_size=hparams.batch_size,
+                                  num_epochs=hparams.num_epochs)
+        iterator = dataset.make_initializable_iterator()
+        model = model_creator(hparams=hparams,
+                              iterator=iterator,
+                              mode=mode)
+
+    sess = tf.Session(graph=graph)
+
+    modeltuple = ModelTuple(graph=graph, iterator=iterator,
+                            model=model, session=sess)
+
+    return modeltuple
+
+
 
 def _single_cell(unit_type, num_units, depth, forget_bias, dropout, mode,
                  residual_connection=False, residual_fn=None, device_str=None):
