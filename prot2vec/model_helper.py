@@ -4,8 +4,7 @@ from collections import namedtuple
 from nlstm.rnn_cell import NLSTMCell
 from model import CPDBModel
 from synth_model import CopyModel
-from datasets.dataset import *
-from datasets.synth_dataset import *
+from datasets.dataset_helper import create_dataset
 
 __all__ = [
     "create_rnn_cell", "create_model", "multiclass_sample", "multiclass_prediction",
@@ -48,37 +47,17 @@ def create_model(hparams, mode):
     """
 
     if hparams.model == "cpdb":
-        dataset_creator = pssp_dataset
         model_creator = CPDBModel
     elif hparams.model == "copy":
-        dataset_creator = copytask_dataset
         model_creator = CopyModel
     else:
         print("Error! Model %s unrecognized" % (hparams.model))
         exit()
 
-    if mode == tf.contrib.learn.ModeKeys.TRAIN:
-        shuffle = True
-        data_file = hparams.train_file
-        num_epochs = hparams.num_epochs
-    elif mode == tf.contrib.learn.ModeKeys.EVAL:
-        shuffle = False
-        data_file = hparams.valid_file
-        num_epochs = 1
-    else:
-        shuffle = False
-        data_file = hparams.infer_file
-        num_epochs = 1
-
     graph = tf.Graph()
 
     with graph.as_default():
-        dataset = dataset_creator(tf.constant(data_file, tf.string),
-                                  shuffle,
-                                  hparams.num_features,
-                                  hparams.num_labels,
-                                  batch_size=hparams.batch_size,
-                                  num_epochs=num_epochs)
+        dataset = create_dataset(hparams, mode)
         iterator = dataset.make_initializable_iterator()
         model = model_creator(hparams=hparams,
                               iterator=iterator,

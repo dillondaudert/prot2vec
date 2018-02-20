@@ -1,5 +1,4 @@
 '''Functions and utilities for handling and preprocessing data.'''
-from pathlib import Path
 import numpy as np
 import tensorflow as tf
 
@@ -7,20 +6,15 @@ __all__ = [
     "copytask_dataset",
 ]
 
-HOME = str(Path.home())
-
-def copytask_dataset(filename, shuffle, num_features, num_labels, batch_size=32, num_epochs=None):
+def copytask_dataset(dataset, shuffle, num_features, num_labels, batch_size=32, num_epochs=None):
     """
     Read the copy task dataset and return as a TensorFlow Dataset.
     Args:
-        filename    - a Tensor containing a list of strings of input files
+        dataset     - a Dataset object source
         shuffle     - a boolean Tensor
         batch_size  - the integer size of each minibatch (Default: 32)
         num_epochs  - how many epochs to repeat the dataset (Default: None)
     """
-
-    # 1) define a source to construct a dataset
-    dataset = tf.data.TFRecordDataset(filename)
 
     # use tf.parse_single_example() to extract data from a tf.Example proto buffer
     def parser(record):
