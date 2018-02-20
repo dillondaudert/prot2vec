@@ -60,12 +60,15 @@ def create_model(hparams, mode):
     if mode == tf.contrib.learn.ModeKeys.TRAIN:
         shuffle = True
         data_file = hparams.train_file
+        num_epochs = hparams.num_epochs
     elif mode == tf.contrib.learn.ModeKeys.EVAL:
         shuffle = False
         data_file = hparams.valid_file
+        num_epochs = 1
     else:
         shuffle = False
         data_file = hparams.infer_file
+        num_epochs = 1
 
     graph = tf.Graph()
 
@@ -75,7 +78,7 @@ def create_model(hparams, mode):
                                   hparams.num_features,
                                   hparams.num_labels,
                                   batch_size=hparams.batch_size,
-                                  num_epochs=hparams.num_epochs)
+                                  num_epochs=num_epochs)
         iterator = dataset.make_initializable_iterator()
         model = model_creator(hparams=hparams,
                               iterator=iterator,
