@@ -42,7 +42,7 @@ def get_hparams(setting):
             forget_bias=1,
             dropout=0.0,
             batch_size=50,
-            num_epochs=10,
+            num_epochs=1,
             optimizer="sgd",
             learning_rate=0.05,
             momentum=0.0,
@@ -51,7 +51,7 @@ def get_hparams(setting):
             train_helper="sched",
             sched_decay="inv_sig",
             num_keep_ckpts=1,
-            #tag="2"
+            tag="TESTDATASET"
         )
 
     elif setting == "copy":
@@ -72,7 +72,7 @@ def get_hparams(setting):
             forget_bias=1,
             dropout=0.0,
             batch_size=128,
-            num_epochs=500,
+            num_epochs=2,
             optimizer="sgd",
             learning_rate=0.5,
             momentum=0.0,
@@ -81,7 +81,7 @@ def get_hparams(setting):
             train_helper="sched",
             sched_decay="linear",
             num_keep_ckpts=1,
-            tag="sched_10-50L_12V_10k_2"
+            tag="TESTDATASET"
         )
 
     return hparams

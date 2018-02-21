@@ -1,6 +1,6 @@
 # Generate various synthetic datasets
 from pathlib import Path
-import numpy as np
+import numpy as np, pandas as pd
 import tensorflow as tf
 
 HOME = str(Path.home())
@@ -11,7 +11,7 @@ def _int64_feature(value):
 def _floats_feature(value):
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))
 
-def copy_task(filename, num_seqs, len_min, len_max, num_vals):
+def copytask(filename, num_seqs, len_min, len_max, num_vals):
     """
     Generate sequences of random binary vectors for the copy task
     and save as .tfrecords file
@@ -52,3 +52,20 @@ def copy_task(filename, num_seqs, len_min, len_max, num_vals):
                 'tgt_in': _floats_feature(target_seq_in),
                 'tgt_out': _floats_feature(target_seq_out)}))
             writer.write(example.SerializeToString())
+
+def copytask_infer(filename, num_seqs, len_min, len_max, num_vals):
+    """
+    Create a .csv file with samples for the copy task. Useful for inference.
+    """
+    print("Creating an file of samples called %s" % filename)
+    samples = []
+    for i in range(num_seqs):
+        length = np.random.randint(len_min, len_max+1)
+        seq = np.random.randint(0, 2, size=(length, (num_vals)))
+        seq[:,-1] = 0.
+        seq[-1,:] = 0.
+        seq = seq.astype(np.float32)
+        samples.append(seq)
+
+    # save as a npz file
+    np.savez(filename, samples)
