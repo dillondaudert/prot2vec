@@ -2,7 +2,7 @@
 
 from pathlib import Path
 import tensorflow as tf, numpy as np
-import .parsers as prs
+from . import parsers as prs
 
 def create_dataset(hparams, mode):
     """
@@ -57,16 +57,17 @@ def create_dataset(hparams, mode):
         dataset = dataset.repeat(num_epochs)
 
     if parser is not None:
-        dataset = dataset.map(parser, num_parallel_calls=4)
+        dataset = dataset.map(lambda x:parser(x, hparams), num_parallel_calls=4)
 
     dataset = dataset.cache()
 
-    dataset = dataset.padded_batch(
-            batch_size,
-            padded_shapes=(tf.TensorShape([None, hparams.num_features]),
-                           tf.TensorShape([None, hparams.num_labels]),
-                           tf.TensorShape([None, hparams.num_labels]),
-                           tf.TensorShape([]))
+    if mode != tf.contrib.learn.ModeKeys.INFER:
+        dataset = dataset.padded_batch(
+                batch_size,
+                padded_shapes=(tf.TensorShape([None, hparams.num_features]),
+                               tf.TensorShape([None, hparams.num_labels]),
+                               tf.TensorShape([None, hparams.num_labels]),
+                               tf.TensorShape([])))
 
     dataset = dataset.prefetch(1)
 

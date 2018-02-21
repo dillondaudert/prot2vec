@@ -6,7 +6,7 @@ __all__ = [
     "cpdb_parser", "autoenc_parser", "copytask_parser",
 ]
 
-def cpdb_parser(record):
+def cpdb_parser(record, hparams):
     """
     Parse a CPDB tfrecord Record into a tuple of tensors.
     """
@@ -23,8 +23,8 @@ def cpdb_parser(record):
     seq_len = tf.cast(seq_len, tf.int32)
     seq = tf.sparse_tensor_to_dense(parsed["seq_data"])
     label = tf.sparse_tensor_to_dense(parsed["label_data"])
-    src = tf.reshape(seq, [-1, num_features])
-    tgt = tf.reshape(label, [-1, num_labels])
+    src = tf.reshape(seq, [-1, hparams.num_features])
+    tgt = tf.reshape(label, [-1, hparams.num_labels])
 
     # prepend and append 'NoSeq' to create dec_input / dec_target
     noseq = tf.constant([[0., 0., 0., 0., 0., 0., 0., 0., 1.]])
@@ -33,7 +33,7 @@ def cpdb_parser(record):
 
     return src, tgt_input, tgt_output, seq_len
 
-def autoenc_parser(record):
+def autoenc_parser(record, hparams):
     keys_to_features = {
         "seq_len": tf.FixedLenFeature([], tf.int64),
         "seq_data": tf.VarLenFeature(tf.float32),
@@ -46,8 +46,8 @@ def autoenc_parser(record):
     seq_len = tf.cast(seq_len, tf.int32)
     seq = tf.sparse_tensor_to_dense(parsed["seq_data"])
     label = tf.sparse_tensor_to_dense(parsed["label_data"])
-    src = tf.reshape(seq, [-1, num_features])
-    tgt = tf.reshape(label, [-1, num_labels])
+    src = tf.reshape(seq, [-1, hparams.num_features])
+    tgt = tf.reshape(label, [-1, hparams.num_labels])
 
     # prepend and append 'NoSeq' to create dec_input / dec_target
     noseq = tf.constant([[0., 0., 0., 0., 0., 0., 0., 0.,
@@ -58,7 +58,7 @@ def autoenc_parser(record):
 
     return src, tgt_input, tgt_output, seq_len
 
-def copytask_parser(record):
+def copytask_parser(record, hparams):
     keys_to_features = {
         "seq_len": tf.FixedLenFeature([], tf.int64),
         "seq_data": tf.VarLenFeature(tf.float32),
@@ -73,8 +73,8 @@ def copytask_parser(record):
     seq = tf.sparse_tensor_to_dense(parsed["seq_data"])
     tgt_in = tf.sparse_tensor_to_dense(parsed["tgt_in"])
     tgt_out = tf.sparse_tensor_to_dense(parsed["tgt_out"])
-    src = tf.reshape(seq, [-1, num_features])
-    tgt_in = tf.reshape(tgt_in, [-1, num_labels])
-    tgt_out = tf.reshape(tgt_out, [-1, num_labels])
+    src = tf.reshape(seq, [-1, hparams.num_features])
+    tgt_in = tf.reshape(tgt_in, [-1, hparams.num_labels])
+    tgt_out = tf.reshape(tgt_out, [-1, hparams.num_labels])
 
     return src, tgt_in, tgt_out, seq_len
