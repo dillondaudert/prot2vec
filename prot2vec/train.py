@@ -1,5 +1,6 @@
 # basic example of training a network end-to-end
 from time import process_time
+from pathlib import Path
 import tensorflow as tf, numpy as np
 from model_helper import create_model
 from utils.hparams import get_hparams
@@ -8,10 +9,7 @@ from utils.vocab_utils import create_table
 def train(hparams):
     """Build and train the model as specified in hparams"""
 
-    basedir = hparams.logdir
-    modeldir = basedir + "/" + hparams.tag
-    ckptsdir = modeldir+"/ckpts"
-    logdir = modeldir
+    ckptsdir = str(Path(hparams.modeldir, "ckpts"))
 
     # build training and eval graphs
     train_tuple = create_model(hparams, tf.contrib.learn.ModeKeys.TRAIN)
@@ -24,7 +22,10 @@ def train(hparams):
         local_initializer = tf.local_variables_initializer()
 
     # Summary writers
-    summary_writer = tf.summary.FileWriter(logdir, train_tuple.graph, max_queue=25, flush_secs=30)
+    summary_writer = tf.summary.FileWriter(hparams.modeldir,
+                                           train_tuple.graph,
+                                           max_queue=25,
+                                           flush_secs=30)
 
     train_tuple.session.run([initializer])
 
