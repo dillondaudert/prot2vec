@@ -1,13 +1,11 @@
 """Hparams"""
-
+import argparse as ap
 import tensorflow as tf
 from pathlib import Path
 
 HOME = str(Path.home())
 
-__all__ = ["get_hparams",]
-
-VALID_HPARAMS = {
+HPARAM_CHOICES= {
         "optimizer": ["adam", "sgd"],
         "unit_type": ["lstm", "nlstm", "gru"],
         "train_helper": ["teacher", "sched"],
@@ -15,22 +13,63 @@ VALID_HPARAMS = {
         "initializer": ["glorot_normal", "glorot_uniform", "orthogonal"],
         "decoder": ["greedy", "beam"],
         }
-HPARAMS = ["logdir", "num_features", "num_labels", "batch_size", "num_epochs",
-           "optimizer", "learning_rate", "momentum", "unit_type", "num_units",
-           "num_layers", "depth", "num_residual_layers", "forget_bias",
-           "dropout", "max_gradient_norm", "colocate_gradients_with_ops",
-           "num_keep_ckpts", "dense_input", "train_helper", "sched_decay",
-           "initializer", "decoder", "beam_width"]
+
+HPARAMS = ["num_features", "num_labels", "initializer", "dense_input",
+           "unit_type", "num_layers", "depth", "num_residual_layers",
+           "forget_bias", "dropout", "decoder", "beam_width", "batch_size",
+           "num_epochs", "train_helper", "sched_decay", "optimizer",
+           "learning_rate", "momentum", "max_gradient_norm",
+           "colocate_gradients_with_ops", "num_keep_ckpts",
+           "model", "train_data", "valid_data", "infer_data", "modeldir"]
+
+def hparams_to_str(hparams):
+    print("Hyperparameters")
+    for hp in HPARAMS:
+        if hp in vars(hparams):
+            print("\t"+hp+": ", vars(hparams)[hp])
+
+def get_hparam_parser():
+    parser = ap.ArgumentParser(description="Hyperparameters", add_help=False,
+                               argument_default=ap.SUPPRESS)
+    arch_group = parser.add_argument_group("architecture")
+    arch_group.add_argument("--num_features", type=int)
+    arch_group.add_argument("--num_labels", type=int)
+    arch_group.add_argument("--initializer", type=str,
+                        choices=HPARAM_CHOICES["initializer"])
+    arch_group.add_argument("--dense_input", type=bool)
+    arch_group.add_argument("--unit_type", type=str,
+                        choices=HPARAM_CHOICES["unit_type"])
+    arch_group.add_argument("--num_layers", type=int)
+    arch_group.add_argument("--depth", type=int)
+    arch_group.add_argument("--num_residual_layers", type=int)
+    arch_group.add_argument("--forget_bias", type=float)
+    arch_group.add_argument("--dropout", type=float)
+    arch_group.add_argument("--decoder", type=str)
+    arch_group.add_argument("--beam_width", type=int)
+
+    tr_group = parser.add_argument_group("training")
+    tr_group.add_argument("--batch_size", type=int)
+    tr_group.add_argument("--num_epochs", type=int)
+    tr_group.add_argument("--train_helper", type=str,
+                        choices=HPARAM_CHOICES["train_helper"])
+    tr_group.add_argument("--sched_decay", type=str,
+                        choices=HPARAM_CHOICES["sched_decay"])
+    tr_group.add_argument("--optimizer", type=str,
+                         choices=HPARAM_CHOICES["optimizer"])
+    tr_group.add_argument("--learning_rate", type=float)
+    tr_group.add_argument("--momentum", type=float)
+    tr_group.add_argument("--max_gradient_norm", type=float)
+    tr_group.add_argument("--colocate_gradients_with_ops", type=bool)
+    tr_group.add_argument("--num_keep_ckpts", type=int)
+
+    return parser
+
 
 def get_hparams(setting):
     """Return the hyperparameter settings given by name."""
     hparams = tf.contrib.training.HParams()
-    if setting == "default":
+    if setting == "cpdb":
         hparams = tf.contrib.training.HParams(
-            model="cpdb",
-            logdir=HOME+"/thesis/models/prot2vec/default",
-            train_file=HOME+"/data/cpdb/cv_5/cpdb_6133_filter_train_1.tfrecords",
-            valid_file=HOME+"/data/cpdb/cv_5/cpdb_6133_filter_valid_1.tfrecords",
             num_features=43,
             num_labels=9,
             unit_type="lstm",
@@ -52,15 +91,10 @@ def get_hparams(setting):
             train_helper="sched",
             sched_decay="inv_sig",
             num_keep_ckpts=1,
-            tag="TESTDATASET"
         )
 
     elif setting == "copy":
         hparams = tf.contrib.training.HParams(
-            model="copy",
-            logdir=HOME+"/thesis/models/prot2vec/copy",
-            train_file = HOME+"/data/synthetic/copy/train_10-50L_12V_10k.tfrecords",
-            valid_file = HOME+"/data/synthetic/copy/valid_10-50L_12V_1k.tfrecords",
             num_features=12,
             num_labels=12,
             unit_type="lstm",
@@ -82,7 +116,6 @@ def get_hparams(setting):
             train_helper="sched",
             sched_decay="linear",
             num_keep_ckpts=1,
-            tag="TESTDATASET"
         )
 
     return hparams
