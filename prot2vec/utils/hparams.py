@@ -24,6 +24,7 @@ HPARAMS = ["logdir", "num_features", "num_labels", "batch_size", "num_epochs",
 
 def get_hparams(setting):
     """Return the hyperparameter settings given by name."""
+    hparams = tf.contrib.training.HParams()
     if setting == "default":
         hparams = tf.contrib.training.HParams(
             model="cpdb",
