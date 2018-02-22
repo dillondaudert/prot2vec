@@ -95,8 +95,8 @@ def get_hparams(setting):
 
     elif setting == "copy":
         hparams = tf.contrib.training.HParams(
-            num_features=12,
-            num_labels=12,
+            num_features=10,
+            num_labels=10,
             unit_type="lstm",
             initializer="glorot_uniform",
             dense_input=False,
@@ -116,6 +116,9 @@ def get_hparams(setting):
             train_helper="sched",
             sched_decay="linear",
             num_keep_ckpts=1,
+            train_file="/home/dillon/data/synthetic/copy/train_30L_10V.tfrecords",
+            valid_file="/home/dillon/data/synthetic/copy/valid_30L_10V.tfrecords",
+            infer_file="/home/dillon/data/synthetic/copy/infer_30L_10V.npz",
         )
 
     return hparams

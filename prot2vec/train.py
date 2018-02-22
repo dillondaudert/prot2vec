@@ -50,8 +50,9 @@ def train(hparams):
             if global_step % 20 == 0:
                 # Do one evaluation
                 checkpoint_path = train_tuple.model.saver.save(train_tuple.session,
-                                                               ckptsdir,
+                                                               ckptsdir+"/ckpt",
                                                                global_step=global_step)
+                print(checkpoint_path)
                 eval_tuple.model.saver.restore(eval_tuple.session, checkpoint_path)
                 eval_tuple.session.run([eval_tuple.iterator.initializer, local_initializer])
                 while True:

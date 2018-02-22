@@ -38,8 +38,8 @@ class BaseModel(object):
             self.update_metrics = res[3]
 
         elif self.mode == tf.contrib.learn.ModeKeys.INFER:
-            # TODO: Implement Inference
-            raise NotImplementedError("Inference not implemented yet!")
+            self.inputs = res[0]
+            self.sample_ids = res[1]
 
         params = tf.trainable_variables()
 
@@ -86,7 +86,6 @@ class BaseModel(object):
                 tf.summary.histogram(var.name, var, collections=["eval"])
             self.eval_summary = tf.summary.merge_all("eval")
 
-            # TODO: Add inference summaries
 
         self.saver = tf.train.Saver(tf.global_variables(), max_to_keep=hparams.num_keep_ckpts)
 
@@ -140,3 +139,8 @@ class BaseModel(object):
                          self.accuracy,
                          self.eval_summary,
                          self.update_metrics])
+
+    def infer(self, sess):
+        """Inference."""
+        assert self.mode == tf.contrib.learn.ModeKeys.INFER
+        return sess.run([self.inputs, self.sample_ids])

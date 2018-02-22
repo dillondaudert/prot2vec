@@ -21,7 +21,15 @@ class CopyModel(base_model.BaseModel):
             A tuple with (logits, loss, metrics, update_ops)
         """
 
-        enc_inputs, dec_inputs, dec_outputs, seq_len = self.iterator.get_next()
+        sample = self.iterator.get_next()
+        if self.mode != tf.contrib.learn.ModeKeys.INFER:
+            enc_inputs, dec_inputs, dec_outputs, seq_len = sample
+        else:
+            # At inference, only two inputs are given
+            enc_inputs, seq_len, dec_start = sample
+            #indices = (hparams.num_labels-1)*tf.ones([enc_inputs.shape[0]], tf.int32)
+            #depth = hparams.num_labels
+            #dec_start = tf.one_hot(indices, depth, axis=-1)
 
         with tf.variable_scope(scope or "dynamic_seq2seq", dtype=tf.float32):
             # create encoder
@@ -48,7 +56,6 @@ class CopyModel(base_model.BaseModel):
 
             tgt_seq_len = tf.add(seq_len, tf.constant(1, tf.int32))
 
-            # TODO: Add Inference decoder
             # create decoder
             dec_cells = mdl_help.create_rnn_cell(unit_type=hparams.unit_type,
                                                  num_units=hparams.num_units,
@@ -82,21 +89,39 @@ class CopyModel(base_model.BaseModel):
                                                        sampling_probability=tf.constant(1.0),
                                                        next_inputs_fn=lambda x: mdl_help.multiclass_sample(x))
 
+            else: # running inference
+                def end_fn(sample_ids):
+                    are_eq = tf.equal(dec_start, sample_ids)
+                    reduce_eq = tf.reduce_all(are_eq, axis=-1)
+                    return reduce_eq
+                helper = tf.contrib.seq2seq.\
+                         InferenceHelper(sample_fn=lambda x: mdl_help.multiclass_sample(x),
+                                         sample_shape=[hparams.num_labels],
+                                         sample_dtype=tf.float32,
+                                         start_inputs=dec_start,
+                                         end_fn=lambda x: end_fn(x))
+
+            max_len = tf.reduce_max(tgt_seq_len)
+
             decoder = tf.contrib.seq2seq.BasicDecoder(cell=dec_cells,
                                                       helper=helper,
                                                       initial_state=enc_state,
                                                       output_layer=projection_layer)
 
             # run decoder
-            final_outputs, final_states, _ = tf.contrib.seq2seq.dynamic_decode(
+            final_outputs, final_states, final_lengths = tf.contrib.seq2seq.dynamic_decode(
                     decoder=decoder,
                     impute_finished=True,
+                    maximum_iterations=tf.constant(2)*max_len,
                     scope="decoder")
 
             logits = final_outputs.rnn_output
+            sample_ids = final_outputs.sample_id
+
+            if self.mode == tf.contrib.learn.ModeKeys.INFER:
+                return enc_inputs, sample_ids
 
             # mask out entries longer than target sequence length
-            # TODO: Need this to have one entry per class, unlike for one-hot categorical
             mask = tf.expand_dims(tf.sequence_mask(tgt_seq_len, dtype=tf.float32), axis=-1)
 
             #stop gradient thru labels by crossent op

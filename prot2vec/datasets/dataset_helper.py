@@ -27,8 +27,8 @@ def create_dataset(hparams, mode):
     else:
         input_file = Path(hparams.infer_file)
         shuffle = False
-        num_epochs = 1
-        batch_size = 1
+        num_epochs = hparams.num_epochs
+        batch_size = hparams.batch_size
 
     if input_file is None or input_file == "":
         print("Input file must be specified in create_dataset()!")
@@ -61,6 +61,13 @@ def create_dataset(hparams, mode):
 
     dataset = dataset.cache()
 
+    def get_dec_start(x, y):
+        dec_start = tf.reshape(tf.one_hot([hparams.num_labels-1],
+                                           hparams.num_labels,
+                                           axis=-1), [hparams.num_labels])
+        #dec_start = tf.constant([0., 0., 0., 0., 0., 0., 0., 0., 0., 1.], dtype=tf.float32)
+        return x, y, dec_start
+
     if mode != tf.contrib.learn.ModeKeys.INFER:
         dataset = dataset.padded_batch(
                 batch_size,
@@ -68,6 +75,14 @@ def create_dataset(hparams, mode):
                                tf.TensorShape([None, hparams.num_labels]),
                                tf.TensorShape([None, hparams.num_labels]),
                                tf.TensorShape([])))
+    else:
+        dataset = dataset.map(lambda x, y: get_dec_start(x, y))
+        print(dataset)
+        dataset = dataset.padded_batch(
+                batch_size,
+                padded_shapes=(tf.TensorShape([None, hparams.num_features]),
+                               tf.TensorShape([]),
+                               tf.TensorShape([hparams.num_labels])))
 
     dataset = dataset.prefetch(1)
 
