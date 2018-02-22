@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import tensorflow as tf
+import numpy as np, pandas as pd
 from utils.hparams import get_hparams
 from datasets.dataset_helper import create_dataset
 from model_helper import create_model
@@ -28,8 +29,6 @@ def inference(ckpt,
         try:
             sample, output = infer_tuple.model.infer(infer_tuple.session)
             outputs.append((sample, output))
-            print("Sample: ", sample)
-            print("Output: ", output)
         except tf.errors.OutOfRangeError:
             print(" - Done -")
             break
@@ -43,6 +42,25 @@ if __name__ == "__main__":
     hparams = get_hparams("copy")
     hparams.model = "copy"
     hparams.infer_file = input_file
+#    hparams.num_features = 12
+#    hparams.num_labels = 12
     hparams.batch_size = 1
     hparams.num_epochs = 1
-    inference(ckpt, input_file, output_file, hparams)
+    outputs = inference(ckpt, input_file, output_file, hparams)
+
+    columns = ["sample_len", "output_len", "step_accuracy", "overall_accuracy"]
+    rows = []
+    for i, t in enumerate(outputs):
+        s = t[0][0]
+        p = t[1][0]
+        diff = s - p[:s.shape[0], :s.shape[1]]
+        # print lengths and accuracy of each sample
+        sample_len = s.shape[0]
+        output_len = p.shape[0]
+        step_accuracy = np.mean(np.all(diff == 0., axis=1))
+        overall_accuracy = np.mean(diff == 0.)
+        rows.append((sample_len, output_len, step_accuracy, overall_accuracy))
+
+    df = pd.DataFrame.from_records(rows, columns=columns)
+    df.to_csv("sched50k_30L_infer_outputs.csv")
+
