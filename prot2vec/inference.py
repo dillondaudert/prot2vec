@@ -23,14 +23,18 @@ def inference(ckpt,
     infer_tuple.model.saver.restore(infer_tuple.session, ckpt)
     infer_tuple.session.run([infer_tuple.iterator.initializer])
 
+    outputs = []
     while True:
         try:
             sample, output = infer_tuple.model.infer(infer_tuple.session)
+            outputs.append((sample, output))
             print("Sample: ", sample)
             print("Output: ", output)
         except tf.errors.OutOfRangeError:
             print(" - Done -")
             break
+
+    return outputs
 
 if __name__ == "__main__":
     ckpt = "/home/dillon/thesis/models/prot2vec/copy/sched50k/ckpts-39100"
