@@ -30,8 +30,7 @@ def copytask(filename, num_seqs, len_min, len_max, num_vals):
         for i in range(num_seqs):
             length = np.random.randint(len_min, len_max+1)
             seq = np.random.randint(0, 2, size=(length, (num_vals)))
-            # the last value of the last location is only used for the delimiter
-            seq[:,-1] = 0.
+            # the last value is only used for the delimiter
             seq[-1,:] = 0.
             seq = seq.astype(np.float32)
 
