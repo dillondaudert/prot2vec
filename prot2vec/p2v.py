@@ -21,19 +21,13 @@ def main():
     tr_parser = subparsers.add_parser("train", help="Begin or continue training a model",
                                       parents=[hp_parser])
 
-    tr_parser.add_argument('-m', '--model', choices=['cpdb', 'copy'],
-                           type=str, help='specify the Model class')
-    tr_parser.add_argument('--train_data', required=True,
-                           help="training data file")
-    tr_parser.add_argument('--valid_data', required=True,
-                           help="validation data file")
+    tr_parser.add_argument("-H", "--hparams", required=True,
+                           help="file specifying the hyperparameters for the model")
     tr_parser.add_argument("--logdir", required=True,
                            help="the directory where model checkpoints and logs will\
                                  be saved")
-    tr_parser.add_argument("-H", "--hparams", required=True,
-                           help="file specifying the hyperparameters for the model")
-    # TODO: the --name flag default should be hparams_to_name
-    tr_parser.add_argument("--name", default="default", help="name of this trained model")
+    tr_parser.add_argument("-n", "--name", required=True,
+                           help="Name of model directory (logdir/name)")
 
     tr_parser.set_defaults(entry="train")
 
@@ -41,19 +35,19 @@ def main():
 
     if args.entry == "train":
         # run training
-        logpath = Path(args.logdir)
-        trainpath = Path(args.train_data)
-        validpath = Path(args.valid_data)
-        hparams = get_hparams(args.model)
-        hparams.model = args.model
-        hparams.modeldir = str(Path(logpath, args.name).absolute())
-        hparams.train_file = str(trainpath.absolute())
-        hparams.valid_file = str(validpath.absolute())
+        hparams = get_hparams(args.hparams)
 
         # replace any hparams specified as cl args
         for argkey in vars(args):
             if argkey in HPARAMS:
                 vars(hparams)[argkey] = vars(args)[argkey]
+
+        logpath = Path(args.logdir)
+        trainpath = Path(hparams.train_file)
+        validpath = Path(hparams.valid_file)
+        hparams.modeldir = str(Path(logpath, args.name).absolute())
+        hparams.train_file = str(trainpath.absolute())
+        hparams.valid_file = str(validpath.absolute())
 
         hparams_to_str(hparams)
 
