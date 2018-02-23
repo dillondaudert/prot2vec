@@ -32,22 +32,33 @@ def train(hparams):
     start_time = process_time()
     # initialize the training dataset
     train_tuple.session.run([train_tuple.iterator.initializer])
+    # finalize the graph
+    train_tuple.graph.finalize()
+
+    profile_next_step = False
     # Train until the dataset throws an error (at the end of num_epochs)
     while True:
         step_time = []
         try:
             curr_time = process_time()
-            _, train_loss, global_step, _, summary = train_tuple.model.train(train_tuple.session)
+            if profile_next_step:
+                # run profiling
+                _, train_loss, global_step, _, summary = train_tuple.model.train_with_profile(train_tuple.session, summary_writer)
+                profile_next_step = False
+            else:
+                _, train_loss, global_step, _, summary = train_tuple.model.train(train_tuple.session)
             step_time.append(process_time() - curr_time)
 
             # write train summaries
             if global_step == 1:
                 summary_writer.add_summary(summary, global_step)
-            if global_step % 5 == 0:
+            if global_step % 75 == 0:
                 summary_writer.add_summary(summary, global_step)
                 print("Step: %d, Training Loss: %f, Avg Step/Sec: %2.2f" % (global_step, train_loss, np.mean(step_time)))
 
-            if global_step % 20 == 0:
+            if global_step % 400 == 0:
+                step_time = []
+                profile_next_step = True
                 # Do one evaluation
                 checkpoint_path = train_tuple.model.saver.save(train_tuple.session,
                                                                ckptsdir+"/ckpt",

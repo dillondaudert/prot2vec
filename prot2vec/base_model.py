@@ -75,7 +75,8 @@ class BaseModel(object):
             # Summaries
             tf.summary.scalar("grad_norm", gradient_norm, collections=["train"])
             tf.summary.scalar("train_loss", self.train_loss, collections=["train"])
-            tf.summary.scalar("sample_probability", self.sample_probability, collections=["train"])
+            if hparams.train_helper == "sched":
+                tf.summary.scalar("sample_probability", self.sample_probability, collections=["train"])
             self.train_summary = tf.summary.merge_all("train")
 
         elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
@@ -130,6 +131,21 @@ class BaseModel(object):
                          self.global_step,
                          self.sample_probability,
                          self.train_summary])
+
+
+    def train_with_profile(self, sess, writer):
+        """Do a single training step, with profiling"""
+        assert self.mode == tf.contrib.learn.ModeKeys.TRAIN
+        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+        run_metadata = tf.RunMetadata()
+        retvals = sess.run([self.update,
+                            self.train_loss,
+                            self.global_step,
+                            self.sample_probability,
+                            self.train_summary], options=run_options,
+                                              run_metadata=run_metadata)
+        writer.add_run_metadata(run_metadata, "step "+str(retvals[2]), retvals[2])
+        return retvals
 
 
     def eval(self, sess):
