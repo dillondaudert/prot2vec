@@ -16,7 +16,7 @@ HPARAM_CHOICES= {
         }
 
 HPARAMS = ["num_features", "num_labels", "initializer", "dense_input",
-           "unit_type", "num_layers", "depth", "num_residual_layers",
+           "unit_type", "num_units", "num_layers", "depth", "num_residual_layers",
            "forget_bias", "dropout", "decoder", "beam_width", "batch_size",
            "num_epochs", "train_helper", "sched_decay", "optimizer",
            "learning_rate", "momentum", "max_gradient_norm",
@@ -47,6 +47,7 @@ def get_hparam_parser():
     arch_group.add_argument("--dense_input", type=bool)
     arch_group.add_argument("--unit_type", type=str,
                         choices=HPARAM_CHOICES["unit_type"])
+    arch_group.add_argument("--num_units", type=int)
     arch_group.add_argument("--num_layers", type=int)
     arch_group.add_argument("--depth", type=int)
     arch_group.add_argument("--num_residual_layers", type=int)
