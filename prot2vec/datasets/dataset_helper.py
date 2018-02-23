@@ -50,6 +50,7 @@ def create_dataset(hparams, mode):
         parser = None
 
     # perform the appropriate transformations and return
+    dataset = dataset.cache()
 
     if shuffle:
         dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=batch_size*100, count=num_epochs))
@@ -59,7 +60,6 @@ def create_dataset(hparams, mode):
     if parser is not None:
         dataset = dataset.map(lambda x:parser(x, hparams), num_parallel_calls=4)
 
-    dataset = dataset.cache()
 
     def get_dec_start(x, y):
         dec_start = tf.reshape(tf.one_hot([hparams.num_labels-1],
