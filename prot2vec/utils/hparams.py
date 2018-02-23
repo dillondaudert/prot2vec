@@ -6,6 +6,7 @@ from pathlib import Path
 HOME = str(Path.home())
 
 HPARAM_CHOICES= {
+        "model": ["cpdb", "copy"],
         "optimizer": ["adam", "sgd"],
         "unit_type": ["lstm", "nlstm", "gru"],
         "train_helper": ["teacher", "sched"],
@@ -20,7 +21,7 @@ HPARAMS = ["num_features", "num_labels", "initializer", "dense_input",
            "num_epochs", "train_helper", "sched_decay", "optimizer",
            "learning_rate", "momentum", "max_gradient_norm",
            "colocate_gradients_with_ops", "num_keep_ckpts",
-           "model", "train_data", "valid_data", "infer_data", "modeldir"]
+           "model", "train_file", "valid_file", "infer_file", "modeldir"]
 
 def hparams_to_str(hparams):
     print("Hyperparameters")
@@ -31,6 +32,13 @@ def hparams_to_str(hparams):
 def get_hparam_parser():
     parser = ap.ArgumentParser(description="Hyperparameters", add_help=False,
                                argument_default=ap.SUPPRESS)
+    gen_group = parser.add_argument_group("general")
+    gen_group.add_argument("-m", "--model", type=str,
+                           choices=HPARAM_CHOICES["model"])
+    gen_group.add_argument("--train_file", type=str)
+    gen_group.add_argument("--valid_file", type=str)
+    gen_group.add_argument("--infer_file", type=str)
+
     arch_group = parser.add_argument_group("architecture")
     arch_group.add_argument("--num_features", type=int)
     arch_group.add_argument("--num_labels", type=int)
@@ -70,6 +78,7 @@ def get_hparams(setting):
     hparams = tf.contrib.training.HParams()
     if setting == "cpdb":
         hparams = tf.contrib.training.HParams(
+            model="cpdb",
             num_features=43,
             num_labels=9,
             unit_type="lstm",
@@ -95,8 +104,9 @@ def get_hparams(setting):
 
     elif setting == "copy":
         hparams = tf.contrib.training.HParams(
-            num_features=10,
-            num_labels=10,
+            model="copy",
+            num_features=12,
+            num_labels=12,
             unit_type="lstm",
             initializer="glorot_uniform",
             dense_input=False,
@@ -107,7 +117,7 @@ def get_hparams(setting):
             forget_bias=1,
             dropout=0.0,
             batch_size=128,
-            num_epochs=2,
+            num_epochs=500,
             optimizer="sgd",
             learning_rate=0.5,
             momentum=0.0,
@@ -116,9 +126,8 @@ def get_hparams(setting):
             train_helper="sched",
             sched_decay="linear",
             num_keep_ckpts=1,
-            train_file="/home/dillon/data/synthetic/copy/train_30L_10V.tfrecords",
-            valid_file="/home/dillon/data/synthetic/copy/valid_30L_10V.tfrecords",
-            infer_file="/home/dillon/data/synthetic/copy/infer_30L_10V.npz",
+            train_file="/home/dillon/data/synthetic/copy/train_10-50L_12V_10k.tfrecords",
+            valid_file="/home/dillon/data/synthetic/copy/valid_10-50L_12V_1k.tfrecords",
         )
 
     return hparams
