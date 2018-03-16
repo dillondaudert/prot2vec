@@ -40,6 +40,11 @@ def create_dataset(hparams, mode):
         parser = prs.copytask_parser
     elif hparams.model == "autoenc":
         parser = prs.autoenc_parser
+    elif hparams.model == "bdrnn":
+        parser = prs.bdrnn_parser
+    else:
+        print("Model %s has no associated TFRecord parser!" % hparams.model)
+        exit()
 
     # create the initial dataset from the file
     if input_file.suffix == ".tfrecords":
@@ -61,28 +66,35 @@ def create_dataset(hparams, mode):
         dataset = dataset.map(lambda x:parser(x, hparams), num_parallel_calls=4)
 
 
-    def get_dec_start(x, y):
-        dec_start = tf.reshape(tf.one_hot([hparams.num_labels-1],
-                                           hparams.num_labels,
-                                           axis=-1), [hparams.num_labels])
-        #dec_start = tf.constant([0., 0., 0., 0., 0., 0., 0., 0., 0., 1.], dtype=tf.float32)
-        return x, y, dec_start
+    if hparams.model != "bdrnn":
+        def get_dec_start(x, y):
+            dec_start = tf.reshape(tf.one_hot([hparams.num_labels-1],
+                                               hparams.num_labels,
+                                               axis=-1), [hparams.num_labels])
+            #dec_start = tf.constant([0., 0., 0., 0., 0., 0., 0., 0., 0., 1.], dtype=tf.float32)
+            return x, y, dec_start
 
-    if mode != tf.contrib.learn.ModeKeys.INFER:
+        if mode != tf.contrib.learn.ModeKeys.INFER:
+            dataset = dataset.padded_batch(
+                    batch_size,
+                    padded_shapes=(tf.TensorShape([None, hparams.num_features]),
+                                   tf.TensorShape([None, hparams.num_labels]),
+                                   tf.TensorShape([None, hparams.num_labels]),
+                                   tf.TensorShape([])))
+        else:
+            dataset = dataset.map(lambda x, y: get_dec_start(x, y))
+            print(dataset)
+            dataset = dataset.padded_batch(
+                    batch_size,
+                    padded_shapes=(tf.TensorShape([None, hparams.num_features]),
+                                   tf.TensorShape([]),
+                                   tf.TensorShape([hparams.num_labels])))
+    else:
         dataset = dataset.padded_batch(
                 batch_size,
                 padded_shapes=(tf.TensorShape([None, hparams.num_features]),
-                               tf.TensorShape([None, hparams.num_labels]),
                                tf.TensorShape([None, hparams.num_labels]),
                                tf.TensorShape([])))
-    else:
-        dataset = dataset.map(lambda x, y: get_dec_start(x, y))
-        print(dataset)
-        dataset = dataset.padded_batch(
-                batch_size,
-                padded_shapes=(tf.TensorShape([None, hparams.num_features]),
-                               tf.TensorShape([]),
-                               tf.TensorShape([hparams.num_labels])))
 
     dataset = dataset.prefetch(1)
 
