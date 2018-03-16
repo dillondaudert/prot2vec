@@ -41,7 +41,8 @@ def train(hparams):
         step_time = []
         try:
             curr_time = process_time()
-            if profile_next_step:
+            # if profile_next_step:
+            if False:
                 # run profiling
                 _, train_loss, global_step, _, summary = train_tuple.model.train_with_profile(train_tuple.session, summary_writer)
                 profile_next_step = False
@@ -52,11 +53,11 @@ def train(hparams):
             # write train summaries
             if global_step == 1:
                 summary_writer.add_summary(summary, global_step)
-            if global_step % 75 == 0:
+            if global_step % 15 == 0:
                 summary_writer.add_summary(summary, global_step)
                 print("Step: %d, Training Loss: %f, Avg Step/Sec: %2.2f" % (global_step, train_loss, np.mean(step_time)))
 
-            if global_step % 400 == 0:
+            if global_step % 100 == 0:
                 step_time = []
                 profile_next_step = True
                 # Do one evaluation
