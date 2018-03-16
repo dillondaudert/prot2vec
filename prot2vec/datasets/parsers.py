@@ -78,3 +78,26 @@ def copytask_parser(record, hparams):
     tgt_out = tf.reshape(tgt_out, [-1, hparams.num_labels])
 
     return src, tgt_in, tgt_out, seq_len
+
+
+def bdrnn_parser(record, hparams):
+    """
+    Parse a CPDB tfrecord Record into a tuple of tensors.
+    """
+
+    keys_to_features = {
+        "seq_len": tf.FixedLenFeature([], tf.int64),
+        "seq_data": tf.VarLenFeature(tf.float32),
+        "label_data": tf.VarLenFeature(tf.float32),
+        }
+
+    parsed = tf.parse_single_example(record, keys_to_features)
+
+    seq_len = parsed["seq_len"]
+    seq_len = tf.cast(seq_len, tf.int32)
+    seq = tf.sparse_tensor_to_dense(parsed["seq_data"])
+    label = tf.sparse_tensor_to_dense(parsed["label_data"])
+    seq = tf.reshape(seq, [-1, hparams.num_features])
+    tgt_outputs = tf.reshape(label, [-1, hparams.num_labels])
+
+    return seq, tgt_outputs, seq_len
