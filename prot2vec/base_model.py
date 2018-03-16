@@ -46,18 +46,25 @@ class BaseModel(object):
         # training update ops
         if self.mode == tf.contrib.learn.ModeKeys.TRAIN:
             self.learning_rate = hparams.learning_rate
-            self.momentum = hparams.momentum
 
             # optimizer
             if hparams.optimizer == "adam":
                 opt = tf.train.AdamOptimizer(self.learning_rate)
             elif hparams.optimizer == "sgd":
+                if "momentum" in vars(hparams):
+                    self.momentum = hparams.momentum
+                else:
+                    self.momentum = 0.
+
                 if self.momentum == 0.:
                     opt = tf.train.GradientDescentOptimizer(self.learning_rate)
                 else:
                     opt = tf.train.MomentumOptimizer(self.learning_rate,
                                                      self.momentum,
                                                      use_nesterov=True)
+            elif hparams.optimizer == "adadelta":
+                opt = tf.train.AdadeltaOptimizer(self.learning_rate,
+                                                 epsilon=1e-06)
             else:
                 raise ValueError("Optimizer %s not recognized!" % (hparams.optimizer))
 
@@ -112,7 +119,7 @@ class BaseModel(object):
         elif hparams.sched_decay == "linear":
             min_eps = tf.constant(0.035)
             eps = tf.maximum(min_eps, (eps - tf.divide(tf.cast(self.global_step, tf.float32),
-                                                       tf.constant(34000, dtype=tf.float32))))
+                                                       tf.constant(30000, dtype=tf.float32))))
         elif hparams.sched_decay == "inv_sig":
             k = tf.constant(90.)
             start_offset = tf.constant(1.4)
