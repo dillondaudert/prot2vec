@@ -4,6 +4,7 @@ from collections import namedtuple
 from nlstm.rnn_cell import NLSTMCell
 from model import CPDBModel
 from synth_model import CopyModel
+from bdrnn_model import BDRNNModel
 from datasets.dataset_helper import create_dataset
 
 __all__ = [
@@ -50,6 +51,8 @@ def create_model(hparams, mode):
         model_creator = CPDBModel
     elif hparams.model == "copy":
         model_creator = CopyModel
+    elif hparams.model == "bdrnn":
+        model_creator = BDRNNModel
     else:
         print("Error! Model %s unrecognized" % (hparams.model))
         exit()
@@ -83,6 +86,10 @@ def _single_cell(unit_type, num_units, depth, forget_bias, dropout, mode,
         single_cell = tf.nn.rnn_cell.LSTMCell(name="lstm",
                                               num_units=num_units,
                                               forget_bias=forget_bias)
+    elif unit_type == "lstmblock":
+        single_cell = tf.contrib.rnn.LSTMBlockCell(name="lstm",
+                                                   num_units=num_units,
+                                                   forget_bias=forget_bias)
     elif unit_type == "nlstm":
         single_cell = NLSTMCell(name="nlstm",
                                 num_units=num_units,
@@ -107,11 +114,15 @@ def _single_cell(unit_type, num_units, depth, forget_bias, dropout, mode,
     return single_cell
 
 def _cell_list(unit_type, num_units, num_layers, num_residual_layers, depth,
-               forget_bias, dropout, mode, residual_fn=None, num_gpus=1, base_gpu=0):
+               forget_bias, dropout, mode, num_gpus, base_gpu, residual_fn=None):
     """Create a list of RNN cells."""
 
     cell_list = []
     for i in range(num_layers):
+        if num_gpus == 1:
+            device_str = "/device:GPU:%d" % (base_gpu)
+        else:
+            device_str = "/device:GPU:%d" % ((i+base_gpu) % num_gpus)
         single_cell = _single_cell(
             unit_type=unit_type,
             num_units=num_units,
@@ -120,13 +131,14 @@ def _cell_list(unit_type, num_units, num_layers, num_residual_layers, depth,
             dropout=dropout,
             mode=mode,
             residual_connection=(i >= num_layers - num_residual_layers),
-            residual_fn=residual_fn
+            residual_fn=residual_fn,
+            device_str=device_str
         )
         cell_list.append(single_cell)
     return cell_list
 
 def create_rnn_cell(unit_type, num_units, num_layers, num_residual_layers, depth,
-                    forget_bias, dropout, mode):
+                    forget_bias, dropout, mode, num_gpus=1, base_gpu=0):
     """Create single- or multi-layer RNN cell.
 
     Args:
@@ -139,6 +151,7 @@ def create_rnn_cell(unit_type, num_units, num_layers, num_residual_layers, depth
         depth: only used for NLSTM; the depth of the nesting
         forget_bias: the initial forget bias of the RNNCell(s)
         dropout: floating point between 0.0 and 1.0, the probability of dropout
+        device_str: the device this rnn will be placed on
         mode: either tf.contrib.learn.TRAIN/EVAL/INFER
 
     Returns:
@@ -152,7 +165,10 @@ def create_rnn_cell(unit_type, num_units, num_layers, num_residual_layers, depth
                            depth=depth,
                            forget_bias=forget_bias,
                            dropout=dropout,
-                           mode=mode)
+                           mode=mode,
+                           num_gpus=num_gpus,
+                           base_gpu=base_gpu
+                           )
 
     if len(cell_list) == 1:
         return cell_list[0]
