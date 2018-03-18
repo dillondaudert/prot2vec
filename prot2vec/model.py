@@ -107,8 +107,11 @@ class CPDBModel(base_model.BaseModel):
                                                                   labels=labels,
                                                                   name="crossent")
 
-            loss = (tf.reduce_sum(crossent*mask)/(hparams.batch_size*tf.reduce_mean(tf.cast(tgt_seq_len,
-                                                                                            tf.float32))))
+#            loss = (tf.reduce_sum(crossent*mask)/(hparams.batch_size*tf.reduce_mean(tf.cast(tgt_seq_len,
+#                                                                                            tf.float32))))
+
+            loss = tf.reduce_sum((crossent * mask) / tf.expand_dims(
+                tf.expand_dims(tf.cast(tgt_seq_len, tf.float32), -1), -1)) / hparams.batch_size
 
             metrics = []
             update_ops = []
