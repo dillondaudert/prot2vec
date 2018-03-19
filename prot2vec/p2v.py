@@ -29,6 +29,9 @@ def main():
     tr_parser.add_argument("-n", "--name", required=True,
                            help="Name of model directory (logdir/name)")
 
+    tr_parser.add_argument("-s", "--saved", type=str, default=None,
+                           help="A checkpoint to a saved model to resume training.")
+
     tr_parser.set_defaults(entry="train")
 
     args = parser.parse_args()
@@ -48,6 +51,7 @@ def main():
         hparams.modeldir = str(Path(logpath, args.name).absolute())
         hparams.train_file = str(trainpath.absolute())
         hparams.valid_file = str(validpath.absolute())
+        hparams.saved = str(Path(args.saved).absolute())
 
         hparams_to_str(hparams)
 

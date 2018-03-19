@@ -27,7 +27,11 @@ def train(hparams):
                                            max_queue=25,
                                            flush_secs=30)
 
-    train_tuple.session.run([initializer])
+    if hparams.saved is not None:
+        # load checkpoint
+        train_tuple.model.saver.restore(train_tuple.session, hparams.saved)
+    else:
+        train_tuple.session.run([initializer])
 
     start_time = process_time()
     # initialize the training dataset
