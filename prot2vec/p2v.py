@@ -51,7 +51,10 @@ def main():
         hparams.modeldir = str(Path(logpath, args.name).absolute())
         hparams.train_file = str(trainpath.absolute())
         hparams.valid_file = str(validpath.absolute())
-        hparams.saved = str(Path(args.saved).absolute())
+        if args.saved is not None:
+            hparams.saved = str(Path(args.saved).absolute())
+        else:
+            hparams.saved = None
 
         hparams_to_str(hparams)
 
