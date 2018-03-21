@@ -124,6 +124,8 @@ class BaseModel(object):
             k = tf.constant(90.)
             start_offset = tf.constant(1.4)
             eps = (k / (k + tf.exp(tf.cast(self.global_step, tf.float32)/k)))/start_offset
+        elif hparams.sched_decay == "none":
+            eps = tf.constant(0.)
         sample_probability = tf.constant(1.) - eps
 
         return sample_probability
