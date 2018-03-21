@@ -43,6 +43,7 @@ class CPDBModel(base_model.BaseModel):
             enc_outputs, enc_state = tf.nn.dynamic_rnn(cell=enc_cells,
                                                        inputs=enc_inputs,
                                                        sequence_length=seq_len,
+                                                       swap_memory=True,
                                                        dtype=tf.float32,
                                                        scope="encoder")
 
@@ -93,6 +94,7 @@ class CPDBModel(base_model.BaseModel):
             final_outputs, final_states, _ = tf.contrib.seq2seq.dynamic_decode(
                     decoder=decoder,
                     impute_finished=True,
+                    swap_memory=True,
                     scope="decoder")
 
             logits = final_outputs.rnn_output
