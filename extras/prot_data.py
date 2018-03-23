@@ -29,6 +29,8 @@ def make_prot_tfrecords(filename, num_train, num_valid, num_test):
 
     # open the file
     seqs = pd.read_csv(filename, names=["seq"])
+    # "shuffle" the dataset
+    seqs = seqs.sample(None, frac=1)
     num_seqs = len(seqs)
     num_files = num_train + num_valid + num_test
     seqs_per_file = num_seqs//num_files
@@ -52,30 +54,27 @@ def make_prot_tfrecords(filename, num_train, num_valid, num_test):
         with tf.python_io.TFRecordWriter(filename) as writer:
             # convert the strings to feature vectors and write to file
             for i in range(start_index, start_index+seqs_per_file):
-                length = len(seqs.iloc[i].seq)
-                seq = prot_to_vector(seqs.iloc[i].seq)
+                try:
+                    length = len(seqs.iloc[i].seq)
+                    seq = prot_to_vector(seqs.iloc[i].seq)
 
-                target_seq = np.copy(seq[:, 0:21])
-                # prepend and append the delimiter for the target input and output
-                delim = aminos_df.loc["EOS"].values[0:21].reshape(1, -1)
-                target_seq_in = np.concatenate([delim, target_seq], 0)
-                target_seq_out = np.concatenate([target_seq, delim], 0)
-                print(seq)
-                print(seq.shape)
-                print(target_seq_in)
-                print(target_seq_in.shape)
-                print(target_seq_out)
-                print(target_seq_out.shape)
+                    target_seq = np.copy(seq[:, 0:21])
+                    # prepend and append the delimiter for the target input and output
+                    delim = aminos_df.loc["EOS"].values[0:21].reshape(1, -1)
+                    target_seq_in = np.concatenate([delim, target_seq], 0)
+                    target_seq_out = np.concatenate([target_seq, delim], 0)
 
-                seq = seq.reshape(-1)
-                target_seq_in = target_seq_in.reshape(-1)
-                target_seq_out = target_seq_out.reshape(-1)
+                    seq = seq.reshape(-1)
+                    target_seq_in = target_seq_in.reshape(-1)
+                    target_seq_out = target_seq_out.reshape(-1)
 
-                quit()
+                    example = tf.train.Example(features=tf.train.Features(feature={
+                        'seq_len': _int64_feature(length),
+                        'seq_data': _floats_feature(seq),
+                        'tgt_in': _floats_feature(target_seq_in),
+                        'tgt_out': _floats_feature(target_seq_out)}))
+                    writer.write(example.SerializeToString())
+                except:
+                    print("Skipping sequence with unknown amino acid")
+                    continue
 
-                example = tf.train.Example(features=tf.train.Features(feature={
-                    'seq_len': _int64_feature(length),
-                    'seq_data': _floats_feature(seq),
-                    'tgt_in': _floats_feature(target_seq_in),
-                    'tgt_out': _floats_feature(target_seq_out)}))
-                writer.write(example.SerializeToString())
