@@ -8,11 +8,20 @@ from model_helper import *
 
 class BaseModel(object):
 
-    def __init__(self, hparams, iterator, mode, target_lookup_table=None, scope=None):
+    def __init__(self,
+                 hparams,
+                 iterator,
+                 mode,
+                 source_lookup_table=None,
+                 target_lookup_table=None,
+                 reverse_target_lookup_table=None,
+                 scope=None):
         self.hparams = hparams
         self.iterator = iterator
         self.mode = mode
+        self.source_lookup_table = source_lookup_table
         self.target_lookup_table = target_lookup_table
+        self.reverse_target_lookup_table = reverse_target_lookup_table
         self.global_step = tf.Variable(0, name="global_step", trainable=False)
         self.sample_probability = self._get_sample_probability(hparams)
 
