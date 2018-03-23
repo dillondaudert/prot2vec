@@ -2,7 +2,7 @@
 
 from pathlib import Path
 import tensorflow as tf, numpy as np
-from . import parsers as prs
+import parsers as prs
 
 def create_dataset(hparams, mode):
     """
@@ -38,8 +38,6 @@ def create_dataset(hparams, mode):
         parser = prs.cpdb_parser
     elif hparams.model == "copy":
         parser = prs.copytask_parser
-    elif hparams.model == "autoenc":
-        parser = prs.autoenc_parser
     elif hparams.model == "bdrnn":
         parser = prs.bdrnn_parser
     else:
@@ -99,6 +97,77 @@ def create_dataset(hparams, mode):
     dataset = dataset.prefetch(1)
 
     return dataset
+
+def create_cpdb2_dataset(hparams, mode):
+    """
+    Create a dataset for cpdb2 data files from source, target text files.
+    """
+
+    if mode == tf.contrib.learn.ModeKeys.TRAIN:
+        source_file = Path(hparams.train_source_file)
+        target_file = Path(hparams.train_target_file)
+        shuffle = True
+        batch_size = hparams.batch_size
+        num_epochs = hparams.num_epochs
+    elif mode == tf.contrib.learn.ModeKeys.EVAL:
+        source_file = Path(hparams.valid_source_file)
+        target_file = Path(hparams.valid_target_file)
+        shuffle = False
+        batch_size = hparams.batch_size
+        num_epochs = 1
+    else:
+        source_file = Path(hparams.infer_source_file)
+        target_file = Path(hparams.infer_target_file)
+        shuffle = False
+        num_epochs = hparams.num_epochs
+        batch_size = hparams.batch_size
+
+    src_dataset = tf.data.TextLineDataset(source_file)
+    tgt_dataset = tf.data.TextLineDataset(target_file)
+
+    src_eos_id = hparams.source_lookup_table.lookup(tf.constant("EOS"))
+    tgt_sos_id = hparams.target_lookup_table.lookup(tf.constant("SOS"))
+    tgt_eos_id = hparams.target_lookup_table.lookup(tf.constant("EOS"))
+
+    src_tgt_dataset = tf.data.Dataset.zip((src_dataset, tgt_dataset))
+
+    if shuffle:
+        src_tgt_dataset = src_tgt_dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=batch_size*100, count=num_epochs))
+    else:
+        src_tgt_dataset = src_tgt_dataset.repeat(num_epochs)
+
+    # split the sequences on character
+    src_tgt_dataset = src_tgt_dataset.map(
+            lambda src, tgt: (tf.string_split([src], delimiter="").values,
+                              tf.string_split([tgt], delimiter="").values)).prefetch(batch_size)
+
+    src_tgt_dataset = src_tgt_dataset.map(
+            lambda src, tgt: (hparams.source_lookup_table.lookup(src),
+                              hparams.target_lookup_table.lookup(tgt)))
+
+    # create targets with prepended <sos> and appended <eos>
+    src_tgt_dataset = src_tgt_dataset.map(
+            lambda src, tgt: (src,
+                              tf.concat(([tgt_sos_id], tgt), 0),
+                              tf.concat((tgt, [tgt_eos_id]), 0)),
+            num_parallel_calls=4).prefetch(batch_size)
+
+    # add in sequence lengths
+    src_tgt_dataset = src_tgt_dataset.map(
+            lambda src, tgt_in, tgt_out: (
+                src, tgt_in, tgt_out, tf.size(src), tf.size(tgt_in)),
+            num_parallel_calls=4).prefetch(batch_size)
+
+    src_tgt_dataset = src_tgt_dataset.padded_batch(
+            batch_size,
+            padded_shapes=(tf.TensorShape([None]),
+                           tf.TensorShape([None]),
+                           tf.TensorShape([None]),
+                           tf.TensorShape([]),
+                           tf.TensorShape([])))
+
+    return src_tgt_dataset
+
 
 def load_dataset_from_npz(filename):
     """
