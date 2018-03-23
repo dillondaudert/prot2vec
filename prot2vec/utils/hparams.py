@@ -85,7 +85,7 @@ def get_hparams(setting):
             unit_type="lstmblock",
             initializer="glorot_uniform",
             dense_input=False,
-            num_units=128,
+            num_units=256,
             num_layers=3,
             num_residual_layers=2,
             depth=0,
@@ -94,17 +94,16 @@ def get_hparams(setting):
             batch_size=64,
             num_epochs=400,
             optimizer="adadelta",
-            learning_rate=1.,
+            learning_rate=0.05,
             momentum=0.0,
             max_gradient_norm=5.,
             colocate_gradients_with_ops=False,
             train_helper="sched",
-            sched_decay="linear",
+            sched_decay="none",
             num_keep_ckpts=2,
             train_file="/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_train_1.tfrecords",
             valid_file="/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_valid_1.tfrecords",
         )
-
     elif setting == "copy":
         hparams = tf.contrib.training.HParams(
             model="copy",
