@@ -6,7 +6,7 @@ from pathlib import Path
 HOME = str(Path.home())
 
 HPARAM_CHOICES= {
-        "model": ["cpdb", "copy", "bdrnn"],
+        "model": ["cpdb", "copy", "bdrnn", "cpdb2"],
         "optimizer": ["adam", "sgd", "adadelta"],
         "unit_type": ["lstm", "nlstm", "gru"],
         "train_helper": ["teacher", "sched"],
@@ -21,7 +21,9 @@ HPARAMS = ["num_features", "num_labels", "initializer", "dense_input",
            "num_epochs", "train_helper", "sched_decay", "optimizer",
            "learning_rate", "momentum", "max_gradient_norm",
            "colocate_gradients_with_ops", "num_keep_ckpts",
-           "model", "train_file", "valid_file", "infer_file", "modeldir"]
+           "model", "train_file", "valid_file", "infer_file", "modeldir",
+           "train_source_file", "train_target_file", "valid_source_file",
+           "valid_target_file", "infer_source_file", "infer_target_file"]
 
 def hparams_to_str(hparams):
     print("Hyperparameters")
@@ -38,6 +40,13 @@ def get_hparam_parser():
     gen_group.add_argument("--train_file", type=str)
     gen_group.add_argument("--valid_file", type=str)
     gen_group.add_argument("--infer_file", type=str)
+    gen_group.add_argument("--train_source_file", type=str)
+    gen_group.add_argument("--train_target_file", type=str)
+    gen_group.add_argument("--valid_source_file", type=str)
+    gen_group.add_argument("--valid_target_file", type=str)
+    gen_group.add_argument("--infer_source_file", type=str)
+    gen_group.add_argument("--infer_target_file", type=str)
+
 
     arch_group = parser.add_argument_group("architecture")
     arch_group.add_argument("--num_features", type=int)
@@ -103,6 +112,35 @@ def get_hparams(setting):
             num_keep_ckpts=2,
             train_file="/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_train_1.tfrecords",
             valid_file="/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_valid_1.tfrecords",
+        )
+    elif setting == "cpdb2":
+        hparams = tf.contrib.training.HParams(
+            model="cpdb2",
+            num_features=30,
+            num_labels=10,
+            unit_type="lstmblock",
+            initializer="glorot_uniform",
+            dense_input=False,
+            num_units=128,
+            num_layers=3,
+            num_residual_layers=2,
+            depth=0,
+            forget_bias=1,
+            dropout=0.0,
+            batch_size=32,
+            num_epochs=1,
+            optimizer="adadelta",
+            learning_rate=0.05,
+            momentum=0.0,
+            max_gradient_norm=5.,
+            colocate_gradients_with_ops=False,
+            train_helper="sched",
+            sched_decay="none",
+            num_keep_ckpts=2,
+            train_source_file="/home/dillon/data/cpdb2/cpdb2_train_source.txt",
+            train_target_file="/home/dillon/data/cpdb2/cpdb2_train_target.txt",
+            valid_source_file="/home/dillon/data/cpdb2/cpdb2_valid_source.txt",
+            valid_target_file="/home/dillon/data/cpdb2/cpdb2_valid_target.txt",
         )
     elif setting == "copy":
         hparams = tf.contrib.training.HParams(
