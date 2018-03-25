@@ -54,8 +54,6 @@ class CPDB2Model(base_model.BaseModel):
                                                        dtype=tf.float32,
                                                        scope="encoder")
 
-            tgt_len = tf.add(seq_len, tf.constant(1, tf.int32))
-
             # TODO: Add Inference decoder
             # create decoder
             dec_cells = mdl_help.create_rnn_cell(unit_type=hparams.unit_type,
