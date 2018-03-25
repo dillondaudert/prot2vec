@@ -9,7 +9,7 @@ __all__ = [
 ]
 
 class CPDBModel(base_model.BaseModel):
-    """A sequence-to-sequence model for the CPDB data.
+    """A sequence-to-sequence model for the CPDB2 data.
     """
 
     def _build_graph(self, hparams, scope=None):
@@ -21,14 +21,14 @@ class CPDBModel(base_model.BaseModel):
             A tuple with (logits, loss, metrics, update_ops)
         """
 
-        enc_inputs, dec_inputs, dec_outputs, seq_len = self.iterator.get_next()
+        src_in, tgt_in, tgt_out, src_len, tgt_len = self.iterator.get_next()
 
         with tf.variable_scope(scope or "dynamic_seq2seq", dtype=tf.float32):
             # create encoder
             dense_input_layer = tf.layers.Dense(hparams.num_units)
 
             if hparams.dense_input:
-                enc_inputs = dense_input_layer(enc_inputs)
+                src_in = dense_input_layer(src_in)
 
             enc_cells = mdl_help.create_rnn_cell(unit_type=hparams.unit_type,
                                                  num_units=hparams.num_units,
@@ -41,13 +41,13 @@ class CPDBModel(base_model.BaseModel):
 
             # run encoder
             enc_outputs, enc_state = tf.nn.dynamic_rnn(cell=enc_cells,
-                                                       inputs=enc_inputs,
-                                                       sequence_length=seq_len,
+                                                       inputs=src_in,
+                                                       sequence_length=src_len,
                                                        swap_memory=True,
                                                        dtype=tf.float32,
                                                        scope="encoder")
 
-            tgt_seq_len = tf.add(seq_len, tf.constant(1, tf.int32))
+            tgt_len = tf.add(seq_len, tf.constant(1, tf.int32))
 
             # TODO: Add Inference decoder
             # create decoder
@@ -66,22 +66,22 @@ class CPDBModel(base_model.BaseModel):
             if self.mode == tf.contrib.learn.ModeKeys.TRAIN:
                 if hparams.train_helper == "teacher":
                     # teacher forcing
-                    helper = tf.contrib.seq2seq.TrainingHelper(inputs=dec_inputs,
-                                                               sequence_length=tgt_seq_len)
+                    helper = tf.contrib.seq2seq.TrainingHelper(inputs=tgt_in,
+                                                               sequence_length=tgt_len)
                 elif hparams.train_helper == "sched":
                     embedding = tf.eye(hparams.num_labels)
                     # scheduled sampling
                     helper = tf.contrib.seq2seq.\
-                             ScheduledEmbeddingTrainingHelper(inputs=dec_inputs,
-                                                              sequence_length=tgt_seq_len,
+                             ScheduledEmbeddingTrainingHelper(inputs=tgt_in,
+                                                              sequence_length=tgt_len,
                                                               embedding=embedding,
                                                               sampling_probability=self.sample_probability,
                                                               )
             elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
                 embedding = tf.eye(hparams.num_labels)
                 helper = tf.contrib.seq2seq.\
-                         ScheduledEmbeddingTrainingHelper(inputs=dec_inputs,
-                                                          sequence_length=tgt_seq_len,
+                         ScheduledEmbeddingTrainingHelper(inputs=tgt_in,
+                                                          sequence_length=tgt_len,
                                                           embedding=embedding,
                                                           sampling_probability=tf.constant(1.0))
 
@@ -100,26 +100,26 @@ class CPDBModel(base_model.BaseModel):
             logits = final_outputs.rnn_output
 
             # mask out entries longer than target sequence length
-            mask = tf.sequence_mask(tgt_seq_len, dtype=tf.float32)
+            mask = tf.sequence_mask(tgt_len, dtype=tf.float32)
 
             #stop gradient thru labels by crossent op
-            labels = tf.stop_gradient(dec_outputs)
+            labels = tf.stop_gradient(tgt_out)
 
             crossent = tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits,
                                                                   labels=labels,
                                                                   name="crossent")
 
-#            loss = (tf.reduce_sum(crossent*mask)/(hparams.batch_size*tf.reduce_mean(tf.cast(tgt_seq_len,
+#            loss = (tf.reduce_sum(crossent*mask)/(hparams.batch_size*tf.reduce_mean(tf.cast(tgt_len,
 #                                                                                            tf.float32))))
 
             loss = tf.reduce_sum((crossent * mask) / tf.expand_dims(
-                tf.expand_dims(tf.cast(tgt_seq_len, tf.float32), -1), -1)) / hparams.batch_size
+                tf.expand_dims(tf.cast(tgt_len, tf.float32), -1), -1)) / hparams.batch_size
 
             metrics = []
             update_ops = []
             if self.mode == tf.contrib.learn.ModeKeys.EVAL:
                 predictions = tf.argmax(input=logits, axis=-1)
-                targets = tf.argmax(input=dec_outputs, axis=-1)
+                targets = tf.argmax(input=tgt_out, axis=-1)
                 acc, acc_update = tf.metrics.accuracy(predictions=predictions,
                                                       labels=targets,
                                                       weights=mask)
