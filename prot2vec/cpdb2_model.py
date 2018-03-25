@@ -5,10 +5,10 @@ import model_helper as mdl_help
 from metrics import streaming_confusion_matrix, cm_summary
 
 __all__ = [
-    "CPDBModel",
+    "CPDB2Model",
 ]
 
-class CPDBModel(base_model.BaseModel):
+class CPDB2Model(base_model.BaseModel):
     """A sequence-to-sequence model for the CPDB2 data.
     """
 
@@ -21,7 +21,14 @@ class CPDBModel(base_model.BaseModel):
             A tuple with (logits, loss, metrics, update_ops)
         """
 
-        src_in, tgt_in, tgt_out, src_len, tgt_len = self.iterator.get_next()
+        src_in_ids, tgt_in_ids, tgt_out_ids, src_len, tgt_len = self.iterator.get_next()
+
+        # embeddings
+        self.init_embeddings()
+
+        src_in = tf.nn.embedding_lookup(self.enc_embedding, src_in_ids)
+        tgt_in = tf.nn.embedding_lookup(self.dec_embedding, tgt_in_ids)
+        tgt_out = tf.nn.embedding_lookup(self.dec_embedding, tgt_out_ids)
 
         with tf.variable_scope(scope or "dynamic_seq2seq", dtype=tf.float32):
             # create encoder
@@ -136,3 +143,9 @@ class CPDBModel(base_model.BaseModel):
                 update_ops = [acc_update, cm_update]
 
             return logits, loss, metrics, update_ops
+
+    def init_embeddings(self):
+        """
+        Initialize the embedding variables.
+        """
+        self.enc_embedding, self.dec_embedding = mdl_help.create_embeddings("cpdb2")
