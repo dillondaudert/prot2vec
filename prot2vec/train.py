@@ -4,7 +4,6 @@ from pathlib import Path
 import tensorflow as tf, numpy as np
 from model_helper import create_model
 from utils.hparams import get_hparams
-from utils.vocab_utils import create_table
 
 def train(hparams):
     """Build and train the model as specified in hparams"""
@@ -17,9 +16,11 @@ def train(hparams):
 
     with train_tuple.graph.as_default():
         initializer = tf.global_variables_initializer()
+        train_tables_initializer = tf.tables_initializer()
 
     with eval_tuple.graph.as_default():
         local_initializer = tf.local_variables_initializer()
+        eval_tables_initializer = tf.tables_initializer()
 
     # Summary writers
     summary_writer = tf.summary.FileWriter(hparams.modeldir,
@@ -35,7 +36,7 @@ def train(hparams):
 
     start_time = process_time()
     # initialize the training dataset
-    train_tuple.session.run([train_tuple.iterator.initializer])
+    train_tuple.session.run([train_tables_initializer, train_tuple.iterator.initializer])
     # finalize the graph
     train_tuple.graph.finalize()
 
@@ -70,7 +71,9 @@ def train(hparams):
                                                                global_step=global_step)
                 print(checkpoint_path)
                 eval_tuple.model.saver.restore(eval_tuple.session, checkpoint_path)
-                eval_tuple.session.run([eval_tuple.iterator.initializer, local_initializer])
+                eval_tuple.session.run([eval_tables_initializer,
+                                        eval_tuple.iterator.initializer,
+                                        local_initializer])
                 while True:
                     try:
                         eval_loss, eval_acc, eval_summary, _ = eval_tuple.model.eval(eval_tuple.session)
