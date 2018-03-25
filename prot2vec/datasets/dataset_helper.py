@@ -14,6 +14,10 @@ def create_dataset(hparams, mode):
         dataset - A tf.data.Dataset object
     """
 
+    # NOTE: Special behavior for cpdb2 here
+    if hparams.model == "cpdb2":
+        return create_cpdb2_dataset(hparams, mode)
+
     if mode == tf.contrib.learn.ModeKeys.TRAIN:
         input_file = Path(hparams.train_file)
         shuffle = True
@@ -124,6 +128,10 @@ def create_cpdb2_dataset(hparams, mode):
 
     src_dataset = tf.data.TextLineDataset(source_file)
     tgt_dataset = tf.data.TextLineDataset(target_file)
+
+    # Create the lookup tables here
+    hparams.source_lookup_table = create_lookup_table("aa")
+    hparams.target_lookup_table = create_lookup_table("ss")
 
     src_eos_id = hparams.source_lookup_table.lookup(tf.constant("EOS"))
     tgt_sos_id = hparams.target_lookup_table.lookup(tf.constant("SOS"))
