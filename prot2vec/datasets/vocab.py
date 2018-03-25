@@ -49,7 +49,7 @@ def create_cpdb2_embedding(vocab):
     if vocab == "aa":
         emb = tf.constant(aminos_df.values, dtype=tf.float32)
     elif vocab == "ss":
-        emb = tf.eye(len(CPDB2_TARGET_ALPHABET))
+        emb = tf.eye(len(CPDB2_TARGET_ALPHABET), dtype=tf.float32)
     else:
         raise ValueError("Unrecognized value for vocab: %s" % (vocab))
 
