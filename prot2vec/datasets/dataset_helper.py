@@ -2,7 +2,7 @@
 
 from pathlib import Path
 import tensorflow as tf, numpy as np
-import parsers as prs
+from . import parsers as prs
 
 def create_dataset(hparams, mode):
     """
@@ -104,20 +104,20 @@ def create_cpdb2_dataset(hparams, mode):
     """
 
     if mode == tf.contrib.learn.ModeKeys.TRAIN:
-        source_file = Path(hparams.train_source_file)
-        target_file = Path(hparams.train_target_file)
+        source_file = str(Path(hparams.train_source_file).absolute())
+        target_file = str(Path(hparams.train_target_file).absolute())
         shuffle = True
         batch_size = hparams.batch_size
         num_epochs = hparams.num_epochs
     elif mode == tf.contrib.learn.ModeKeys.EVAL:
-        source_file = Path(hparams.valid_source_file)
-        target_file = Path(hparams.valid_target_file)
+        source_file = str(Path(hparams.valid_source_file).absolute())
+        target_file = str(Path(hparams.valid_target_file).absolute())
         shuffle = False
         batch_size = hparams.batch_size
         num_epochs = 1
     else:
-        source_file = Path(hparams.infer_source_file)
-        target_file = Path(hparams.infer_target_file)
+        source_file = str(Path(hparams.infer_source_file).absolute())
+        target_file = str(Path(hparams.infer_target_file).absolute())
         shuffle = False
         num_epochs = hparams.num_epochs
         batch_size = hparams.batch_size
