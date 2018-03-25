@@ -46,11 +46,13 @@ def main():
                 vars(hparams)[argkey] = vars(args)[argkey]
 
         logpath = Path(args.logdir)
-        trainpath = Path(hparams.train_file)
-        validpath = Path(hparams.valid_file)
         hparams.modeldir = str(Path(logpath, args.name).absolute())
-        hparams.train_file = str(trainpath.absolute())
-        hparams.valid_file = str(validpath.absolute())
+        if "train_file" in vars(hparams):
+            trainpath = Path(hparams.train_file)
+            hparams.train_file = str(trainpath.absolute())
+        if "valid_file" in vars(hparams):
+            validpath = Path(hparams.valid_file)
+            hparams.valid_file = str(validpath.absolute())
         if args.saved is not None:
             hparams.saved = str(Path(args.saved).absolute())
         else:
