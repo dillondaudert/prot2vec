@@ -4,6 +4,7 @@ from pathlib import Path
 import tensorflow as tf, numpy as np
 from model_helper import create_model
 from utils.hparams import get_hparams
+from tensorflow.python.client import timeline
 
 def train(hparams):
     """Build and train the model as specified in hparams"""
@@ -44,16 +45,24 @@ def train(hparams):
     train_tuple.graph.finalize()
 
     profile_next_step = False
+    profiled = False
     # Train until the dataset throws an error (at the end of num_epochs)
     while True:
         step_time = []
         try:
             curr_time = process_time()
             # if profile_next_step:
-            if False:
+            if not profiled and profile_next_step:
+                print("Running training step with profiling")
                 # run profiling
-                _, train_loss, global_step, _, summary = train_tuple.model.train_with_profile(train_tuple.session, summary_writer)
+                _, train_loss, global_step, _, summary, metadata = train_tuple.model.\
+                        train_with_profile(train_tuple.session, summary_writer)
+                # write the metadata out to a chrome trace file
+                trace = timeline.Timeline(step_stats=metadata.step_stats)
+                with open(hparams.modeldir+"/timeline.ctf.json", "w") as tracefile:
+                    tracefile.write(trace.generate_chrome_trace_format())
                 profile_next_step = False
+                profiled = True
             else:
                 _, train_loss, global_step, _, summary = train_tuple.model.train(train_tuple.session)
             step_time.append(process_time() - curr_time)

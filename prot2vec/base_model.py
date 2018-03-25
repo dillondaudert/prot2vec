@@ -163,7 +163,7 @@ class BaseModel(object):
                             self.train_summary], options=run_options,
                                               run_metadata=run_metadata)
         writer.add_run_metadata(run_metadata, "step "+str(retvals[2]), retvals[2])
-        return retvals
+        return (*retvals, run_metadata)
 
 
     def eval(self, sess):

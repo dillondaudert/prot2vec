@@ -84,7 +84,11 @@ def create_model(hparams, mode):
                               iterator=iterator,
                               mode=mode)
 
-    sess = tf.Session(graph=graph)
+    config = tf.ConfigProto()
+    jit_level = tf.OptimizerOptions.ON_1
+    config.graph_options.optimizer_options.global_jit_level = jit_level
+    sess = tf.Session(graph=graph,
+                      config=config)
 
     modeltuple = ModelTuple(graph=graph, iterator=iterator,
                             model=model, session=sess)
