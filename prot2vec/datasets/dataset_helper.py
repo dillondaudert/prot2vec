@@ -3,6 +3,7 @@
 from pathlib import Path
 import tensorflow as tf, numpy as np
 from . import parsers as prs
+from . import vocab
 
 def create_dataset(hparams, mode):
     """
@@ -130,8 +131,8 @@ def create_cpdb2_dataset(hparams, mode):
     tgt_dataset = tf.data.TextLineDataset(target_file)
 
     # Create the lookup tables here
-    hparams.source_lookup_table = create_lookup_table("aa")
-    hparams.target_lookup_table = create_lookup_table("ss")
+    hparams.source_lookup_table = vocab.create_lookup_table("aa")
+    hparams.target_lookup_table = vocab.create_lookup_table("ss")
 
     src_eos_id = hparams.source_lookup_table.lookup(tf.constant("EOS"))
     tgt_sos_id = hparams.target_lookup_table.lookup(tf.constant("SOS"))
