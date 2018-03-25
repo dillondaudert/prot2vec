@@ -36,7 +36,8 @@ def train(hparams):
 
     start_time = process_time()
     # initialize the training dataset
-    train_tuple.session.run([train_tables_initializer, train_tuple.iterator.initializer])
+    train_tuple.session.run([train_tables_initializer])
+    train_tuple.session.run([train_tuple.iterator.initializer])
     # finalize the graph
     train_tuple.graph.finalize()
 
@@ -71,8 +72,8 @@ def train(hparams):
                                                                global_step=global_step)
                 print(checkpoint_path)
                 eval_tuple.model.saver.restore(eval_tuple.session, checkpoint_path)
-                eval_tuple.session.run([eval_tables_initializer,
-                                        eval_tuple.iterator.initializer,
+                eval_tuple.session.run([eval_tables_initializer])
+                eval_tuple.session.run([eval_tuple.iterator.initializer,
                                         local_initializer])
                 while True:
                     try:
