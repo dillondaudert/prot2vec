@@ -6,7 +6,7 @@ import pandas as pd
 # NOTE: the ordering of these alphabets, and the inclusion of the NoSeq token,
 #       was taken from the CullPDB datasets provided by Zhou & Troyanskaya
 
-aminos_df = pd.read_csv("./aminos_vocab_features.csv", index_col=0)
+aminos_df = pd.read_csv("~/thesis/prot2vec/prot2vec/datasets/aminos_vocab_features.csv", index_col=0)
 
 CPDB2_SOURCE_ALPHABET = list(aminos_df.columns)
 
@@ -36,3 +36,21 @@ def create_lookup_table(vocab, reverse=False):
         table = tf.contrib.lookup.index_to_string_table_from_tensor(tf.constant(alphabet))
 
     return table
+
+def create_cpdb2_embedding(vocab):
+    """
+    Create embedding matrices for the CPDB2 dataset.
+    Args:
+        vocab: One of "aa" or "ss" for amino acids or secondary structures, respectively.
+    Returns:
+        An embedding Tensor
+    """
+
+    if vocab == "aa":
+        emb = tf.constant(aminos_df.values, dtype=tf.float32)
+    elif vocab == "ss":
+        emb = tf.eye(len(CPDB2_TARGET_ALPHABET))
+    else:
+        raise ValueError("Unrecognized value for vocab: %s" % (vocab))
+
+    return emb
