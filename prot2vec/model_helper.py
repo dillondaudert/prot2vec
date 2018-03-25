@@ -2,14 +2,30 @@
 import tensorflow as tf
 from collections import namedtuple
 from nlstm.rnn_cell import NLSTMCell
-from model import CPDBModel
+from cpdb_model import CPDBModel
+from cpdb2_model import CPDB2Model
 from synth_model import CopyModel
 from bdrnn_model import BDRNNModel
 from datasets.dataset_helper import create_dataset
+from datasets.vocab import create_cpdb2_embedding
 
 __all__ = [
     "create_rnn_cell", "create_model", "multiclass_sample", "multiclass_prediction",
+    "create_embeddings",
 ]
+
+def create_embeddings(embedding):
+    """
+    Create or load embeddings for encoder and decoder.
+    """
+
+    if embedding == "cpdb2":
+        src_embed = create_cpdb2_embedding("aa")
+        tgt_embed = create_cpdb2_embedding("ss")
+        return src_embed, tgt_embed
+    else:
+        raise ValueError()
+
 
 def multiclass_prediction(logits):
     """
@@ -53,6 +69,8 @@ def create_model(hparams, mode):
         model_creator = CopyModel
     elif hparams.model == "bdrnn":
         model_creator = BDRNNModel
+    elif hparams.model == "cpdb2":
+        model_creator = CPDB2Model
     else:
         print("Error! Model %s unrecognized" % (hparams.model))
         exit()
