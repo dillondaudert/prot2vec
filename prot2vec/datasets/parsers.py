@@ -1,9 +1,10 @@
 '''Functions and utilities for handling and preprocessing data.'''
 import numpy as np
 import tensorflow as tf
+import pandas as pd
 
 __all__ = [
-    "cpdb_parser", "autoenc_parser", "copytask_parser",
+    "cpdb_parser", "cpdb2_parser", "autoenc_parser", "copytask_parser",
 ]
 
 def cpdb_parser(record, hparams):
@@ -32,6 +33,39 @@ def cpdb_parser(record, hparams):
     tgt_output = tf.concat([tgt, noseq], 0)
 
     return src, tgt_input, tgt_output, seq_len
+
+def cpdb2_parser(record, hparams):
+    """
+    Parse a CPDB tfrecord Record into a tuple of tensors.
+    """
+
+    ss_feats = pd.read_csv("./cpdb2_ss_features.csv", index_col=0)
+
+    keys_to_features = {
+        "dssp_id": tf.FixedLenFeature([], tf.string),
+        "seq_len": tf.FixedLenFeature([], tf.int64),
+        "seq_data": tf.VarLenFeature(tf.float32),
+        "label_data": tf.VarLenFeature(tf.float32),
+        }
+
+    parsed = tf.parse_single_example(record, keys_to_features)
+
+    seq_len = parsed["seq_len"]
+    seq_len = tf.cast(seq_len, tf.int32)
+    seq = tf.sparse_tensor_to_dense(parsed["seq_data"])
+    label = tf.sparse_tensor_to_dense(parsed["label_data"])
+    src = tf.reshape(seq, [-1, hparams.num_features])
+    tgt = tf.reshape(label, [-1, hparams.num_labels])
+
+    # prepend and append 'NoSeq' to create dec_input / dec_target
+    sos = tf.constant(ss_feats.loc["SOS"].values.reshape(1, -1), dtype=tf.float32)
+    eos = tf.constant(ss_feats.loc["EOS"].values.reshape(1, -1), dtype=tf.float32)
+
+    tgt_input = tf.concat([sos, tgt], 0)
+    tgt_output = tf.concat([tgt, eos], 0)
+
+    return src, tgt_input, tgt_output, seq_len
+
 
 def autoenc_parser(record, hparams):
     keys_to_features = {

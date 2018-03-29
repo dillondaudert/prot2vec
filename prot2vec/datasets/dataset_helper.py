@@ -41,6 +41,8 @@ def create_dataset(hparams, mode):
 
     if hparams.model == "cpdb":
         parser = prs.cpdb_parser
+    elif hparams.model == "cpdb2":
+        parser = prs.cpdb2_parser
     elif hparams.model == "copy":
         parser = prs.copytask_parser
     elif hparams.model == "bdrnn":
