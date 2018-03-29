@@ -3,6 +3,7 @@
 from pathlib import Path
 import tensorflow as tf, numpy as np
 from . import parsers as prs
+from . import vocab
 
 def create_dataset(hparams, mode):
     """
@@ -13,6 +14,10 @@ def create_dataset(hparams, mode):
     Returns:
         dataset - A tf.data.Dataset object
     """
+
+    # NOTE: Special behavior for cpdb2 here
+    if hparams.model == "cpdb2_prot":
+        return create_cpdb2_dataset(hparams, mode)
 
     if mode == tf.contrib.learn.ModeKeys.TRAIN:
         input_file = Path(hparams.train_file)
@@ -38,8 +43,6 @@ def create_dataset(hparams, mode):
         parser = prs.cpdb_parser
     elif hparams.model == "copy":
         parser = prs.copytask_parser
-    elif hparams.model == "autoenc":
-        parser = prs.autoenc_parser
     elif hparams.model == "bdrnn":
         parser = prs.bdrnn_parser
     else:
@@ -99,6 +102,90 @@ def create_dataset(hparams, mode):
     dataset = dataset.prefetch(1)
 
     return dataset
+
+def create_cpdb2_dataset(hparams, mode):
+    """
+    Create a dataset for cpdb2 data files from source, target text files.
+    """
+
+    output_buffer_size = 1
+
+    if mode == tf.contrib.learn.ModeKeys.TRAIN:
+        source_file = str(Path(hparams.train_source_file).absolute())
+        target_file = str(Path(hparams.train_target_file).absolute())
+        shuffle = True
+        batch_size = hparams.batch_size
+        num_epochs = hparams.num_epochs
+    elif mode == tf.contrib.learn.ModeKeys.EVAL:
+        source_file = str(Path(hparams.valid_source_file).absolute())
+        target_file = str(Path(hparams.valid_target_file).absolute())
+        shuffle = False
+        batch_size = hparams.batch_size
+        num_epochs = 1
+    else:
+        source_file = str(Path(hparams.infer_source_file).absolute())
+        target_file = str(Path(hparams.infer_target_file).absolute())
+        shuffle = False
+        num_epochs = hparams.num_epochs
+        batch_size = hparams.batch_size
+
+    src_dataset = tf.data.TextLineDataset(source_file)
+    tgt_dataset = tf.data.TextLineDataset(target_file)
+
+    # Create the lookup tables here
+    hparams.source_lookup_table = vocab.create_lookup_table("aa")
+    hparams.target_lookup_table = vocab.create_lookup_table("ss")
+
+    src_eos_id = tf.cast(hparams.source_lookup_table.lookup(tf.constant("EOS")), tf.int32)
+    tgt_sos_id = tf.cast(hparams.target_lookup_table.lookup(tf.constant("SOS")), tf.int32)
+    tgt_eos_id = tf.cast(hparams.target_lookup_table.lookup(tf.constant("EOS")), tf.int32)
+
+    src_tgt_dataset = tf.data.Dataset.zip((src_dataset, tgt_dataset))
+
+    if shuffle:
+        src_tgt_dataset = src_tgt_dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=batch_size*50, count=num_epochs))
+    else:
+        src_tgt_dataset = src_tgt_dataset.repeat(num_epochs)
+
+    src_tgt_dataset = src_tgt_dataset.prefetch(batch_size)
+
+    # split the sequences on character
+    src_tgt_dataset = src_tgt_dataset.map(
+            lambda src, tgt: (tf.string_split([src], delimiter="").values,
+                              tf.string_split([tgt], delimiter="").values),
+            num_parallel_calls=4)#.prefetch(output_buffer_size)
+
+    src_tgt_dataset = src_tgt_dataset.map(
+            lambda src, tgt: (tf.cast(hparams.source_lookup_table.lookup(src), tf.int32),
+                              tf.cast(hparams.target_lookup_table.lookup(tgt), tf.int32)),
+            num_parallel_calls=4)#.prefetch(output_buffer_size)
+
+    # create targets with prepended <sos> and appended <eos>
+    src_tgt_dataset = src_tgt_dataset.map(
+            lambda src, tgt: (src,
+                              tf.concat(([tgt_sos_id], tgt), 0),
+                              tf.concat((tgt, [tgt_eos_id]), 0)),
+            num_parallel_calls=4)#.prefetch(output_buffer_size)
+
+    # add in sequence lengths
+    src_tgt_dataset = src_tgt_dataset.map(
+            lambda src, tgt_in, tgt_out: (
+                src, tgt_in, tgt_out, tf.size(src), tf.size(tgt_in)),
+            num_parallel_calls=4)#.prefetch(output_buffer_size)
+
+
+    src_tgt_dataset = src_tgt_dataset.padded_batch(
+            batch_size,
+            padded_shapes=(tf.TensorShape([None]),
+                           tf.TensorShape([None]),
+                           tf.TensorShape([None]),
+                           tf.TensorShape([]),
+                           tf.TensorShape([])))
+
+    #src_tgt_dataset = src_tgt_dataset.prefetch(1)
+
+    return src_tgt_dataset
+
 
 def load_dataset_from_npz(filename):
     """
