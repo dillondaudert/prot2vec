@@ -51,8 +51,8 @@ def train(hparams):
         step_time = []
         try:
             curr_time = process_time()
-            # if profile_next_step:
-            if not profiled and profile_next_step:
+            if False:
+            #if not profiled and profile_next_step:
                 print("Running training step with profiling")
                 # run profiling
                 _, train_loss, global_step, _, summary, metadata = train_tuple.model.\

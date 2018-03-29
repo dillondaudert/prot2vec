@@ -2,6 +2,9 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
+from pathlib import Path
+
+HOME = str(Path.home())
 
 __all__ = [
     "cpdb_parser", "cpdb2_parser", "autoenc_parser", "copytask_parser",
@@ -39,7 +42,7 @@ def cpdb2_parser(record, hparams):
     Parse a CPDB tfrecord Record into a tuple of tensors.
     """
 
-    ss_feats = pd.read_csv("./cpdb2_ss_features.csv", index_col=0)
+    ss_feats = pd.read_csv(HOME+"/thesis/prot2vec/prot2vec/datasets/cpdb2_ss_features.csv", index_col=0)
 
     keys_to_features = {
         "dssp_id": tf.FixedLenFeature([], tf.string),

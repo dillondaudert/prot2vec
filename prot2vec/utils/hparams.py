@@ -113,6 +113,33 @@ def get_hparams(setting):
             train_file="/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_train_1.tfrecords",
             valid_file="/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_valid_1.tfrecords",
         )
+    elif setting == "cpdb2":
+        hparams = tf.contrib.training.HParams(
+            model="cpdb",
+            num_features=30,
+            num_labels=10,
+            unit_type="lstmblock",
+            initializer="glorot_uniform",
+            dense_input=False,
+            num_units=256,
+            num_layers=3,
+            num_residual_layers=2,
+            depth=0,
+            forget_bias=1,
+            dropout=0.0,
+            batch_size=64,
+            num_epochs=400,
+            optimizer="adadelta",
+            learning_rate=0.05,
+            momentum=0.0,
+            max_gradient_norm=5.,
+            colocate_gradients_with_ops=False,
+            train_helper="sched",
+            sched_decay="none",
+            num_keep_ckpts=2,
+            train_file="/home/dillon/data/cpdb2/tfrecords/cpdb2_14335_train_1.tfrecords",
+            valid_file="/home/dillon/data/cpdb2/tfrecords/cpdb2_14335_valid_1.tfrecords",
+        )
     elif setting == "cpdb2_prot":
         hparams = tf.contrib.training.HParams(
             model="cpdb2_prot",

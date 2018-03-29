@@ -63,7 +63,7 @@ def create_model(hparams, mode):
     Returns a ModelTuple(graph, iterator, model, session)
     """
 
-    if hparams.model == "cpdb":
+    if hparams.model == "cpdb" or hparams.model == "cpdb2":
         model_creator = CPDBModel
     elif hparams.model == "copy":
         model_creator = CopyModel

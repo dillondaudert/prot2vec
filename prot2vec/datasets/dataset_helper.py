@@ -80,12 +80,26 @@ def create_dataset(hparams, mode):
             return x, y, dec_start
 
         if mode != tf.contrib.learn.ModeKeys.INFER:
-            dataset = dataset.padded_batch(
-                    batch_size,
+            #dataset = dataset.padded_batch(
+            #        batch_size,
+            #        padded_shapes=(tf.TensorShape([None, hparams.num_features]),
+            #                       tf.TensorShape([None, hparams.num_labels]),
+            #                       tf.TensorShape([None, hparams.num_labels]),
+            #                       tf.TensorShape([])))
+            # BUCKET BY SEQUENCE LENGTH, PAD, AND BATCH
+            dataset = dataset.apply(tf.contrib.data.bucket_by_sequence_length(
+                    lambda a, b, c, seq_len: seq_len,
+                    [50, 100, 150, 200, 250,
+                     300, 400, 500, 600, 700,
+                     800, 900, 1000, 1200, 1400],
+                    [64, 64, 64, 64, 64,
+                     64, 64, 64, 64, 64,
+                     48, 48, 48, 32, 32, 32],
                     padded_shapes=(tf.TensorShape([None, hparams.num_features]),
                                    tf.TensorShape([None, hparams.num_labels]),
                                    tf.TensorShape([None, hparams.num_labels]),
                                    tf.TensorShape([])))
+                    )
         else:
             dataset = dataset.map(lambda x, y: get_dec_start(x, y))
             print(dataset)
