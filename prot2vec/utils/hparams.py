@@ -6,7 +6,7 @@ from pathlib import Path
 HOME = str(Path.home())
 
 HPARAM_CHOICES= {
-        "model": ["cpdb", "copy", "bdrnn", "cpdb2"],
+        "model": ["cpdb", "copy", "bdrnn", "cpdb2", "cpdb2_prot"],
         "optimizer": ["adam", "sgd", "adadelta"],
         "unit_type": ["lstm", "nlstm", "gru"],
         "train_helper": ["teacher", "sched"],
@@ -113,9 +113,9 @@ def get_hparams(setting):
             train_file="/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_train_1.tfrecords",
             valid_file="/home/dillon/data/cpdb/cv_5/cpdb_6133_filter_valid_1.tfrecords",
         )
-    elif setting == "cpdb2":
+    elif setting == "cpdb2_prot":
         hparams = tf.contrib.training.HParams(
-            model="cpdb2",
+            model="cpdb2_prot",
             num_features=30,
             num_labels=10,
             unit_type="lstmblock",

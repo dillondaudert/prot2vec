@@ -16,7 +16,7 @@ def create_dataset(hparams, mode):
     """
 
     # NOTE: Special behavior for cpdb2 here
-    if hparams.model == "cpdb2":
+    if hparams.model == "cpdb2_prot":
         return create_cpdb2_dataset(hparams, mode)
 
     if mode == tf.contrib.learn.ModeKeys.TRAIN:

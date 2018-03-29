@@ -5,10 +5,10 @@ import model_helper as mdl_help
 from metrics import streaming_confusion_matrix, cm_summary
 
 __all__ = [
-    "CPDB2Model",
+    "CPDB2ProtModel",
 ]
 
-class CPDB2Model(base_model.BaseModel):
+class CPDB2ProtModel(base_model.BaseModel):
     """A sequence-to-sequence model for the CPDB2 data.
     """
 

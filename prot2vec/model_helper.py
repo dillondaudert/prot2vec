@@ -3,7 +3,7 @@ import tensorflow as tf
 from collections import namedtuple
 from nlstm.rnn_cell import NLSTMCell
 from cpdb_model import CPDBModel
-from cpdb2_model import CPDB2Model
+from cpdb2_model import CPDB2ProtModel
 from synth_model import CopyModel
 from bdrnn_model import BDRNNModel
 from datasets.dataset_helper import create_dataset
@@ -69,8 +69,8 @@ def create_model(hparams, mode):
         model_creator = CopyModel
     elif hparams.model == "bdrnn":
         model_creator = BDRNNModel
-    elif hparams.model == "cpdb2":
-        model_creator = CPDB2Model
+    elif hparams.model == "cpdb2_prot":
+        model_creator = CPDB2ProtModel
     else:
         print("Error! Model %s unrecognized" % (hparams.model))
         exit()
