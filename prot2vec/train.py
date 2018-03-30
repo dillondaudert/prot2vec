@@ -72,7 +72,7 @@ def train(hparams):
                 summary_writer.add_summary(summary, global_step)
             if global_step % 15 == 0:
                 summary_writer.add_summary(summary, global_step)
-                print("Step: %d, Training Loss: %f, Avg Step/Sec: %2.2f" % (global_step, train_loss, np.mean(step_time)))
+                print("Step: %d, Training Loss: %f, Avg Sec/Step: %2.2f" % (global_step, train_loss, np.mean(step_time)))
 
             if global_step % 100 == 0:
                 step_time = []
