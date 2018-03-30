@@ -23,6 +23,9 @@ class CPDBModel(base_model.BaseModel):
 
         enc_inputs, dec_inputs, dec_outputs, seq_len = self.iterator.get_next()
 
+        # get the size of the batch
+        batch_size = tf.shape(enc_inputs)[0]
+
         with tf.variable_scope(scope or "dynamic_seq2seq", dtype=tf.float32):
             # create encoder
             dense_input_layer = tf.layers.Dense(hparams.num_units)
@@ -112,8 +115,9 @@ class CPDBModel(base_model.BaseModel):
 #            loss = (tf.reduce_sum(crossent*mask)/(hparams.batch_size*tf.reduce_mean(tf.cast(tgt_seq_len,
 #                                                                                            tf.float32))))
 
+
             loss = tf.reduce_sum((crossent * mask) / tf.expand_dims(
-                tf.expand_dims(tf.cast(tgt_seq_len, tf.float32), -1), -1)) / hparams.batch_size
+                tf.expand_dims(tf.cast(tgt_seq_len, tf.float32), -1), -1)) / tf.cast(batch_size, tf.float32)
 
             metrics = []
             update_ops = []
