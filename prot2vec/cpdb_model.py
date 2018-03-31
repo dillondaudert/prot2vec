@@ -28,7 +28,7 @@ class CPDBModel(base_model.BaseModel):
 
         with tf.variable_scope(scope or "dynamic_seq2seq", dtype=tf.float32):
             # create encoder
-            dense_input_layer = tf.layers.Dense(hparams.num_units)
+            dense_input_layer = tf.layers.Dense(hparams.num_units, use_bias=False)
 
             if hparams.dense_input:
                 enc_inputs = dense_input_layer(enc_inputs)
