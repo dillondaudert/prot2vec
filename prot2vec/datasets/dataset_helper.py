@@ -163,8 +163,6 @@ def create_cpdb2_dataset(hparams, mode):
     else:
         src_tgt_dataset = src_tgt_dataset.repeat(num_epochs)
 
-    src_tgt_dataset = src_tgt_dataset.prefetch(batch_size)
-
     # split the sequences on character
     src_tgt_dataset = src_tgt_dataset.map(
             lambda src, tgt: (tf.string_split([src], delimiter="").values,
@@ -190,15 +188,29 @@ def create_cpdb2_dataset(hparams, mode):
             num_parallel_calls=4)#.prefetch(output_buffer_size)
 
 
-    src_tgt_dataset = src_tgt_dataset.padded_batch(
-            batch_size,
-            padded_shapes=(tf.TensorShape([None]),
-                           tf.TensorShape([None]),
-                           tf.TensorShape([None]),
+    #src_tgt_dataset = src_tgt_dataset.padded_batch(
+    #        batch_size,
+    #        padded_shapes=(tf.TensorShape([None]),
+    #                       tf.TensorShape([None]),
+    #                       tf.TensorShape([None]),
+    #                       tf.TensorShape([]),
+    #                       tf.TensorShape([])))
+    # BUCKET BY SEQUENCE LENGTH, PAD, AND BATCH
+    src_tgt_dataset = src_tgt_dataset.apply(tf.contrib.data.bucket_by_sequence_length(
+            lambda a, b, c, seq_len: seq_len,
+            [50, 100, 150, 200, 250,
+             300, 400, 500, 600, 700,
+             800, 900, 1000, 1200, 1400],
+            [64, 64, 64, 64, 64,
+             64, 64, 64, 64, 64,
+             48, 48, 48, 32, 32, 32],
+            padded_shapes=(tf.TensorShape([None, hparams.num_features]),
+                           tf.TensorShape([None, hparams.num_labels]),
+                           tf.TensorShape([None, hparams.num_labels]),
                            tf.TensorShape([]),
                            tf.TensorShape([])))
 
-    #src_tgt_dataset = src_tgt_dataset.prefetch(1)
+    src_tgt_dataset = src_tgt_dataset.prefetch(2)
 
     return src_tgt_dataset
 
