@@ -98,7 +98,8 @@ def create_model(hparams, mode):
 
 
 def _single_cell(unit_type, num_units, depth, forget_bias, dropout, mode,
-                 residual_connection=False, residual_fn=None, device_str=None):
+                 highway_connection=False, residual_connection=False,
+                 residual_fn=None, device_str=None):
     """Define a single recurrent cell."""
 
     # Set dropout to 0 if not training
@@ -129,14 +130,18 @@ def _single_cell(unit_type, num_units, depth, forget_bias, dropout, mode,
     if residual_connection:
         single_cell = tf.nn.rnn_cell.ResidualWrapper(
             cell=single_cell, residual_fn=residual_fn)
+    elif highway_connection:
+        single_cell = tf.nn.rnn_cell.HighwayWrapper(
+            cell=single_cell)
 
     if device_str:
         single_cell = tf.nn.rnn_cell.DeviceWrapper(single_cell, device_str)
 
     return single_cell
 
-def _cell_list(unit_type, num_units, num_layers, num_residual_layers, depth,
-               forget_bias, dropout, mode, num_gpus, base_gpu, residual_fn=None):
+def _cell_list(unit_type, num_units, num_layers, num_residual_layers,
+               depth, forget_bias, dropout, mode, num_gpus, base_gpu,
+               residual_fn=None, use_highway_as_residual=False):
     """Create a list of RNN cells."""
 
     cell_list = []
@@ -152,15 +157,17 @@ def _cell_list(unit_type, num_units, num_layers, num_residual_layers, depth,
             forget_bias=forget_bias,
             dropout=dropout,
             mode=mode,
-            residual_connection=(i >= num_layers - num_residual_layers),
+            residual_connection=(i >= num_layers - num_residual_layers and not use_highway_as_residual),
             residual_fn=residual_fn,
+            highway_connection=(i >= num_layers - num_residual_layers and use_highway_as_residual),
             device_str=device_str
         )
         cell_list.append(single_cell)
     return cell_list
 
-def create_rnn_cell(unit_type, num_units, num_layers, num_residual_layers, depth,
-                    forget_bias, dropout, mode, num_gpus=1, base_gpu=0):
+def create_rnn_cell(unit_type, num_units, num_layers, num_residual_layers,
+                    depth, forget_bias, dropout, mode, num_gpus=1, base_gpu=0,
+                    use_highway_as_residual=False):
     """Create single- or multi-layer RNN cell.
 
     Args:
@@ -189,7 +196,8 @@ def create_rnn_cell(unit_type, num_units, num_layers, num_residual_layers, depth
                            dropout=dropout,
                            mode=mode,
                            num_gpus=num_gpus,
-                           base_gpu=base_gpu
+                           base_gpu=base_gpu,
+                           use_highway_as_residual=use_highway_as_residual
                            )
 
     if len(cell_list) == 1:
