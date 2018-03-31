@@ -17,6 +17,7 @@ HPARAM_CHOICES= {
 
 HPARAMS = ["num_features", "num_labels", "initializer", "dense_input",
            "unit_type", "num_units", "num_layers", "depth", "num_residual_layers",
+           "use_highway_as_residual",
            "forget_bias", "dropout", "decoder", "beam_width", "batch_size",
            "num_epochs", "train_helper", "sched_decay", "optimizer",
            "learning_rate", "momentum", "max_gradient_norm",
@@ -60,6 +61,7 @@ def get_hparam_parser():
     arch_group.add_argument("--num_layers", type=int)
     arch_group.add_argument("--depth", type=int)
     arch_group.add_argument("--num_residual_layers", type=int)
+    arch_group.add_argument("--use_highway_as_residual", type=bool)
     arch_group.add_argument("--forget_bias", type=float)
     arch_group.add_argument("--dropout", type=float)
     arch_group.add_argument("--decoder", type=str)
