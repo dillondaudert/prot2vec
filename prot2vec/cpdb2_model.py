@@ -29,7 +29,12 @@ class CPDB2ProtModel(base_model.BaseModel):
         self.init_embeddings(hparams)
 
         src_in = tf.nn.embedding_lookup(self.enc_embedding, src_in_ids)
-        tgt_in = tf.nn.embedding_lookup(self.dec_embedding, tgt_in_ids)
+        dec_dense = tf.get_variable("decoder_embedding",
+                                    [hparams.num_labels, hparams.num_units])
+        if hparams.dense_input:
+            tgt_in = tf.nn.embedding_lookup(dec_dense, tgt_in_ids)
+        else:
+            tgt_in = tf.nn.embedding_lookup(self.dec_embedding, tgt_in_ids)
         tgt_out = tf.nn.embedding_lookup(self.dec_embedding, tgt_out_ids)
 
         with tf.variable_scope(scope or "dynamic_seq2seq", dtype=tf.float32):
@@ -70,6 +75,7 @@ class CPDB2ProtModel(base_model.BaseModel):
                                                  mode=self.mode,
                                                  use_highway_as_residual=hparams.use_highway_as_residual)
 
+
             # output project layer
             projection_layer = tf.layers.Dense(hparams.num_labels, use_bias=False,
                                                name="decoder_projection")
@@ -84,14 +90,14 @@ class CPDB2ProtModel(base_model.BaseModel):
                     helper = tf.contrib.seq2seq.\
                              ScheduledEmbeddingTrainingHelper(inputs=tgt_in,
                                                               sequence_length=tgt_len,
-                                                              embedding=self.decoder_embedding,
+                                                              embedding=dec_dense,
                                                               sampling_probability=self.sample_probability,
                                                               )
             elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
                 helper = tf.contrib.seq2seq.\
                          ScheduledEmbeddingTrainingHelper(inputs=tgt_in,
                                                           sequence_length=tgt_len,
-                                                          embedding=self.decoder_embedding,
+                                                          embedding=dec_dense,
                                                           sampling_probability=tf.constant(1.0))
 
             decoder = tf.contrib.seq2seq.BasicDecoder(cell=dec_cells,
@@ -151,7 +157,3 @@ class CPDB2ProtModel(base_model.BaseModel):
         Initialize the embedding variables.
         """
         self.enc_embedding, self.dec_embedding = mdl_help.create_embeddings("cpdb2")
-        if hparams.dense_input:
-            # create an input embedding of the correct size
-            self.dec_embedding = tf.get_variable("decoder_embedding",
-                                                 [hparams.num_labels, hparams.num_units])
