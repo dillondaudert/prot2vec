@@ -23,6 +23,8 @@ class CPDB2ProtModel(base_model.BaseModel):
 
         src_in_ids, tgt_in_ids, tgt_out_ids, src_len, tgt_len = self.iterator.get_next()
 
+        batch_size = tf.shape(src_in_ids)[0]
+
         # embeddings
         self.init_embeddings()
 
@@ -44,7 +46,8 @@ class CPDB2ProtModel(base_model.BaseModel):
                                                  num_residual_layers=hparams.num_residual_layers,
                                                  forget_bias=hparams.forget_bias,
                                                  dropout=hparams.dropout,
-                                                 mode=self.mode)
+                                                 mode=self.mode,
+                                                 use_highway_as_residual=hparams.use_highway_as_residual)
 
             # run encoder
             enc_outputs, enc_state = tf.nn.dynamic_rnn(cell=enc_cells,
@@ -63,7 +66,8 @@ class CPDB2ProtModel(base_model.BaseModel):
                                                  num_residual_layers=hparams.num_residual_layers,
                                                  forget_bias=hparams.forget_bias,
                                                  dropout=hparams.dropout,
-                                                 mode=self.mode)
+                                                 mode=self.mode,
+                                                 use_highway_as_residual=hparams.use_highway_as_residual)
 
             # output project layer
             projection_layer = tf.layers.Dense(hparams.num_labels, use_bias=False)
@@ -118,7 +122,7 @@ class CPDB2ProtModel(base_model.BaseModel):
 #                                                                                            tf.float32))))
 
             loss = tf.reduce_sum((crossent * mask) / tf.expand_dims(
-                tf.expand_dims(tf.cast(tgt_len, tf.float32), -1), -1)) / hparams.batch_size
+                tf.expand_dims(tf.cast(tgt_len, tf.float32), -1), -1)) / tf.cast(batch_size, tf.float32)
 
             metrics = []
             update_ops = []
