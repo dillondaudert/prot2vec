@@ -110,9 +110,13 @@ def _single_cell(unit_type, num_units, depth, forget_bias, dropout, mode,
                                               num_units=num_units,
                                               forget_bias=forget_bias)
     elif unit_type == "lstmblock":
-        single_cell = tf.contrib.rnn.LSTMBlockCell(name="lstm",
+        single_cell = tf.contrib.rnn.LSTMBlockCell(name="lstmblock",
                                                    num_units=num_units,
                                                    forget_bias=forget_bias)
+    elif unit_type == "lstmblock_fused":
+        single_cell = tf.contrib.rnn.LSTMBlockCellFused(name="lstmblock_fused",
+                                                        num_units=num_units,
+                                                        forget_bias=forget_bias)
     elif unit_type == "nlstm":
         single_cell = NLSTMCell(name="nlstm",
                                 num_units=num_units,
