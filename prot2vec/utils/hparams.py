@@ -8,7 +8,7 @@ HOME = str(Path.home())
 HPARAM_CHOICES= {
         "model": ["cpdb", "copy", "bdrnn", "cpdb2", "cpdb2_prot"],
         "optimizer": ["adam", "sgd", "adadelta"],
-        "unit_type": ["lstm", "lstmblock", "lstmblock_fused", "nlstm", "gru"],
+        "unit_type": ["lstm", "lstmblock", "nlstm", "gru"],
         "train_helper": ["teacher", "sched"],
         "sched_decay": ["linear", "expon", "inv_sig"],
         "initializer": ["glorot_normal", "glorot_uniform", "orthogonal"],
