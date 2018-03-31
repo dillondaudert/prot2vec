@@ -65,6 +65,14 @@ class CPDBModel(base_model.BaseModel):
                                                  mode=self.mode,
                                                  use_highway_as_residual=hparams.use_highway_as_residual)
 
+            # decoder embedding
+            decoder_embedding = tf.get_variable("decoder_embedding",
+                                                [hparams.num_labels, hparams.num_units])
+            if hparams.dense_input:
+                # convert to int32 argmax values for embedding to work
+                dec_inputs = tf.argmax(dec_inputs, axis=-1, output_type=tf.int32)
+                dec_inputs = tf.nn.embedding_lookup(decoder_embedding, dec_inputs)
+
             # output project layer
             projection_layer = tf.layers.Dense(hparams.num_labels, use_bias=False)
 
@@ -74,7 +82,10 @@ class CPDBModel(base_model.BaseModel):
                     helper = tf.contrib.seq2seq.TrainingHelper(inputs=dec_inputs,
                                                                sequence_length=tgt_seq_len)
                 elif hparams.train_helper == "sched":
-                    embedding = tf.eye(hparams.num_labels)
+                    if hparams.dense_input:
+                        embedding = decoder_embedding
+                    else:
+                        embedding = tf.eye(hparams.num_labels)
                     # scheduled sampling
                     helper = tf.contrib.seq2seq.\
                              ScheduledEmbeddingTrainingHelper(inputs=dec_inputs,
@@ -83,7 +94,10 @@ class CPDBModel(base_model.BaseModel):
                                                               sampling_probability=self.sample_probability,
                                                               )
             elif self.mode == tf.contrib.learn.ModeKeys.EVAL:
-                embedding = tf.eye(hparams.num_labels)
+                if hparams.dense_input:
+                    embedding = decoder_embedding
+                else:
+                    embedding = tf.eye(hparams.num_labels)
                 helper = tf.contrib.seq2seq.\
                          ScheduledEmbeddingTrainingHelper(inputs=dec_inputs,
                                                           sequence_length=tgt_seq_len,
