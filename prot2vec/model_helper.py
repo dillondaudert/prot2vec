@@ -182,6 +182,8 @@ def create_rnn_cell(unit_type, num_units, num_layers, num_residual_layers,
         dropout: floating point between 0.0 and 1.0, the probability of dropout
         device_str: the device this rnn will be placed on
         mode: either tf.contrib.learn.TRAIN/EVAL/INFER
+        use_highway_as_residual: Boolean indicating if residual connections should
+            be HighwayWrappers instead of ResidualWrappers. Default: False
 
     Returns:
         An 'RNNCell' instance
