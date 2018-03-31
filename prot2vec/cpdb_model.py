@@ -40,7 +40,8 @@ class CPDBModel(base_model.BaseModel):
                                                  num_residual_layers=hparams.num_residual_layers,
                                                  forget_bias=hparams.forget_bias,
                                                  dropout=hparams.dropout,
-                                                 mode=self.mode)
+                                                 mode=self.mode,
+                                                 use_highway_as_residual=hparams.use_highway_as_residual)
 
             # run encoder
             enc_outputs, enc_state = tf.nn.dynamic_rnn(cell=enc_cells,
@@ -61,7 +62,8 @@ class CPDBModel(base_model.BaseModel):
                                                  num_residual_layers=hparams.num_residual_layers,
                                                  forget_bias=hparams.forget_bias,
                                                  dropout=hparams.dropout,
-                                                 mode=self.mode)
+                                                 mode=self.mode,
+                                                 use_highway_as_residual=hparams.use_highway_as_residual)
 
             # output project layer
             projection_layer = tf.layers.Dense(hparams.num_labels, use_bias=False)
