@@ -197,18 +197,18 @@ def create_cpdb2_dataset(hparams, mode):
     #                       tf.TensorShape([])))
     # BUCKET BY SEQUENCE LENGTH, PAD, AND BATCH
     src_tgt_dataset = src_tgt_dataset.apply(tf.contrib.data.bucket_by_sequence_length(
-            lambda a, b, c, seq_len: seq_len,
+            lambda a, b, c, src_len, tgt_len: src_len,
             [50, 100, 150, 200, 250,
              300, 400, 500, 600, 700,
              800, 900, 1000, 1200, 1400],
             [64, 64, 64, 64, 64,
              64, 64, 64, 64, 64,
              48, 48, 48, 32, 32, 32],
-            padded_shapes=(tf.TensorShape([None, hparams.num_features]),
-                           tf.TensorShape([None, hparams.num_labels]),
-                           tf.TensorShape([None, hparams.num_labels]),
+            padded_shapes=(tf.TensorShape([None]),
+                           tf.TensorShape([None]),
+                           tf.TensorShape([None]),
                            tf.TensorShape([]),
-                           tf.TensorShape([])))
+                           tf.TensorShape([]))))
 
     src_tgt_dataset = src_tgt_dataset.prefetch(2)
 
