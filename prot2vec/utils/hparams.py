@@ -155,6 +155,7 @@ def get_hparams(setting):
             num_units=256,
             num_layers=2,
             num_residual_layers=2,
+            use_highway_as_residual=False,
             depth=0,
             forget_bias=1,
             dropout=0.0,
