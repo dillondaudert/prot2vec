@@ -158,21 +158,28 @@ def create_cpdb2_dataset(hparams, mode):
 
     src_tgt_dataset = tf.data.Dataset.zip((src_dataset, tgt_dataset))
 
-    if shuffle:
-        src_tgt_dataset = src_tgt_dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=batch_size*50, count=num_epochs))
-    else:
-        src_tgt_dataset = src_tgt_dataset.repeat(num_epochs)
+    # NOTE: DOING THIS TRANSFORM FIRST SO I CAN FILTER ON SEQ LENGTH AND CACHE
 
     # split the sequences on character
     src_tgt_dataset = src_tgt_dataset.map(
             lambda src, tgt: (tf.string_split([src], delimiter="").values,
                               tf.string_split([tgt], delimiter="").values),
-            num_parallel_calls=4)#.prefetch(output_buffer_size)
+            num_parallel_calls=4)
 
     src_tgt_dataset = src_tgt_dataset.map(
             lambda src, tgt: (tf.cast(hparams.source_lookup_table.lookup(src), tf.int32),
                               tf.cast(hparams.target_lookup_table.lookup(tgt), tf.int32)),
-            num_parallel_calls=4)#.prefetch(output_buffer_size)
+            num_parallel_calls=4)
+
+    src_tgt_dataset = src_tgt_dataset.filter(lambda src, tgt: tf.size(src) <= 1000)
+
+    src_tgt_dataset = src_tgt_dataset.cache()
+
+    if shuffle:
+        src_tgt_dataset = src_tgt_dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=batch_size*50, count=num_epochs))
+    else:
+        src_tgt_dataset = src_tgt_dataset.repeat(num_epochs)
+
 
     # create targets with prepended <sos> and appended <eos>
     src_tgt_dataset = src_tgt_dataset.map(
